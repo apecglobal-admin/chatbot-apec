@@ -1,0 +1,112 @@
+{
+  "store": {
+    "name": "Apec Shelf AI",
+    "subtitle": "Mỗi màn hình tại kệ là một trợ lý sản phẩm chuyên biệt.",
+    "supportPhone": "1900 6868"
+  },
+  "api": {
+    "endpoint": "https://rag-ai-jn9g.onrender.com/api/external/chat",
+    "apiKey": "",
+    "partnerUserPrefix": "apec-shelf",
+    "requestTimeoutMs": 20000
+  },
+  "departments": [
+    {
+      "id": "fresh-food",
+      "name": "Thực phẩm tươi",
+      "slug": "thuc-pham-tuoi",
+      "zoneLabel": "Kệ A1",
+      "description": "Rau củ, trái cây, thịt cá và gợi ý bảo quản tại quầy tươi.",
+      "assistantSlug": "fresh-food",
+      "welcomeMessage": "Xin chào, tôi phụ trách quầy Thực phẩm tươi. Bạn cần tìm sản phẩm, hỏi cách chọn hay bảo quản nguyên liệu nào?",
+      "placeholder": "Ví dụ: Cá hồi hôm nay còn không? Bảo quản thịt bò thế nào?",
+      "suggestedPrompts": [
+        "Cá hồi hôm nay còn không?",
+        "Rau nào hợp để nấu canh chua?",
+        "Bảo quản thịt bò trong ngăn mát bao lâu?"
+      ],
+      "theme": {
+        "accent": "#2F855A",
+        "accentSoft": "#D7F5E4",
+        "panel": "#F4FAF6",
+        "surface": "#FFFFFF",
+        "userBubble": "#2F855A",
+        "assistantBubble": "#E8F4EC",
+        "badge": "#163E2D"
+      }
+    },
+    {
+      "id": "beverages",
+      "name": "Đồ uống",
+      "slug": "do-uong",
+      "zoneLabel": "Kệ B3",
+      "description": "Nước giải khát, cà phê, trà và tư vấn ghép combo theo nhu cầu.",
+      "assistantSlug": "beverage",
+      "welcomeMessage": "Xin chào, tôi đang hỗ trợ tại quầy Đồ uống. Bạn muốn tìm đồ uống theo hương vị, thương hiệu hay dịp sử dụng?",
+      "placeholder": "Ví dụ: Có nước ép ít đường không? Cà phê nào bán chạy?",
+      "suggestedPrompts": [
+        "Có loại nước ép ít đường nào?",
+        "Cà phê lon nào bán chạy?",
+        "Gợi ý combo nước cho tiệc 10 người."
+      ],
+      "theme": {
+        "accent": "#D97706",
+        "accentSoft": "#FFE6C7",
+        "panel": "#FFF8F0",
+        "surface": "#FFFFFF",
+        "userBubble": "#D97706",
+        "assistantBubble": "#FFF0DB",
+        "badge": "#7C2D12"
+      }
+    },
+    {
+      "id": "household",
+      "name": "Gia dụng",
+      "slug": "gia-dung",
+      "zoneLabel": "Kệ C2",
+      "description": "Dụng cụ nhà bếp, đồ gia dụng nhanh và tư vấn sử dụng an toàn.",
+      "assistantSlug": "homeware",
+      "welcomeMessage": "Xin chào, tôi phụ trách quầy Gia dụng. Bạn muốn tìm sản phẩm nào cho bếp, vệ sinh hay tổ chức không gian sống?",
+      "placeholder": "Ví dụ: Có hộp đựng thực phẩm chịu nhiệt không?",
+      "suggestedPrompts": [
+        "Có hộp đựng thực phẩm chịu nhiệt không?",
+        "Chảo chống dính nào phù hợp bếp từ?",
+        "Gợi ý bộ đồ lau dọn căn hộ nhỏ."
+      ],
+      "theme": {
+        "accent": "#0F766E",
+        "accentSoft": "#D6F5F1",
+        "panel": "#F2FBFA",
+        "surface": "#FFFFFF",
+        "userBubble": "#0F766E",
+        "assistantBubble": "#E1F6F3",
+        "badge": "#134E4A"
+      }
+    },
+    {
+      "id": "beauty",
+      "name": "Mỹ phẩm",
+      "slug": "my-pham",
+      "zoneLabel": "Kệ D4",
+      "description": "Chăm sóc da, tóc và tư vấn routine cơ bản theo nhu cầu thường ngày.",
+      "assistantSlug": "beauty",
+      "welcomeMessage": "Xin chào, tôi là trợ lý quầy Mỹ phẩm. Bạn muốn tìm sản phẩm chăm sóc da, tóc hay quà tặng làm đẹp?",
+      "placeholder": "Ví dụ: Da dầu nên chọn sữa rửa mặt nào?",
+      "suggestedPrompts": [
+        "Da dầu nên chọn sữa rửa mặt nào?",
+        "Có kem chống nắng cho da nhạy cảm không?",
+        "Gợi ý combo quà tặng chăm sóc da."
+      ],
+      "theme": {
+        "accent": "#BE185D",
+        "accentSoft": "#FFD7E8",
+        "panel": "#FFF3F8",
+        "surface": "#FFFFFF",
+        "userBubble": "#BE185D",
+        "assistantBubble": "#FFE3EF",
+        "badge": "#831843"
+      }
+    }
+  ],
+  "updatedAt": "2026-03-31T00:00:00.000Z"
+}
