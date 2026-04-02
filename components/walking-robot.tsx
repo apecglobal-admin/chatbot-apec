@@ -1,195 +1,91 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
+import React, { useEffect, useRef } from "react";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
-export function WalkingRobot() {
-  const [position, setPosition] = useState(0)
-  const [direction, setDirection] = useState<"left" | "right">("right")
-  const [legPhase, setLegPhase] = useState(0)
+interface WalkingRobotProps {
+  /**
+   * Đường dẫn tới file Lottie JSON
+   * @default "/Robot-Bot 3D.json"
+   */
+  src?: string;
+  /**
+   * Kích thước của robot (pixel)
+   * @default 150
+   */
+  size?: number;
+  /**
+   * Tốc độ di chuyển (pixel per frame)
+   * @default 2
+   */
+  speed?: number;
+}
+
+export function WalkingRobot({
+  src = "/Robot-Bot 3D.json",
+  size = 150,
+  speed = 2,
+}: WalkingRobotProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const positionRef = useRef({ x: 0, direction: 1 });
 
   useEffect(() => {
-    const walkInterval = setInterval(() => {
-      setPosition((prev) => {
-        const maxPosition = typeof window !== "undefined" ? window.innerWidth - 100 : 800
-        if (direction === "right" && prev >= maxPosition) {
-          setDirection("left")
-          return prev - 3
-        } else if (direction === "left" && prev <= 0) {
-          setDirection("right")
-          return prev + 3
-        }
-        return direction === "right" ? prev + 3 : prev - 3
-      })
-      setLegPhase((prev) => (prev + 1) % 4)
-    }, 50)
+    let animationFrameId: number;
+    // Khởi tạo vị trí x ngẫu nhiên lúc ban đầu
+    positionRef.current.x =
+      Math.random() * (window.innerWidth - size);
 
-    return () => clearInterval(walkInterval)
-  }, [direction])
+    const animate = () => {
+      if (containerRef.current) {
+        const containerWidth = containerRef.current.offsetWidth;
+        const screenWidth = window.innerWidth;
+
+        let { x, direction } = positionRef.current;
+
+        // Cập nhật vị trí
+        x += speed * direction;
+
+        // Xử lý chạm viền màn hình (đảo chiều)
+        if (x <= 0) {
+          x = 0;
+          direction = 1;
+        } else if (x + containerWidth >= screenWidth) {
+          x = screenWidth - containerWidth;
+          direction = -1;
+        }
+
+        positionRef.current = { x, direction };
+
+        // Dùng translate3d để tăng tốc phần cứng, scaleX để đảo chiều ngang
+        // Giả sử Lottie robot mặc định quay mặt sang phải
+        containerRef.current.style.transform = `translate3d(${x}px, 0, 0) scaleX(${direction})`;
+      }
+
+      animationFrameId = requestAnimationFrame(animate);
+    };
+
+    animationFrameId = requestAnimationFrame(animate);
+
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [speed, size]);
 
   return (
     <div
-      className="absolute bottom-0 transition-transform"
+      ref={containerRef}
+      className="fixed bottom-0 z-[9999] pointer-events-none will-change-transform"
       style={{
-        left: `${position}px`,
-        transform: `scaleX(${direction === "left" ? -1 : 1})`,
+        width: size,
+        height: size,
+        // Đảm bảo phần tử không bị highlight và ngăn việc kéo thả
+        userSelect: "none",
       }}
     >
-      <svg
-        width="80"
-        height="100"
-        viewBox="0 0 80 100"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="drop-shadow-lg"
-      >
-        {/* Robot Head */}
-        <rect
-          x="15"
-          y="5"
-          width="50"
-          height="35"
-          rx="8"
-          className="fill-primary"
-        />
-        {/* Antenna */}
-        <line
-          x1="40"
-          y1="5"
-          x2="40"
-          y2="-5"
-          className="stroke-primary"
-          strokeWidth="3"
-        />
-        <circle cx="40" cy="-8" r="5" className="fill-accent" />
-        
-        {/* Eyes */}
-        <circle cx="28" cy="22" r="6" className="fill-background" />
-        <circle cx="52" cy="22" r="6" className="fill-background" />
-        <circle
-          cx={28 + (direction === "right" ? 2 : -2)}
-          cy="22"
-          r="3"
-          className="fill-foreground"
-        />
-        <circle
-          cx={52 + (direction === "right" ? 2 : -2)}
-          cy="22"
-          r="3"
-          className="fill-foreground"
-        />
-        
-        {/* Mouth */}
-        <rect x="30" y="30" width="20" height="4" rx="2" className="fill-accent" />
-        
-        {/* Neck */}
-        <rect x="35" y="40" width="10" height="8" className="fill-muted-foreground" />
-        
-        {/* Body */}
-        <rect
-          x="18"
-          y="48"
-          width="44"
-          height="30"
-          rx="6"
-          className="fill-primary"
-        />
-        {/* Body Panel */}
-        <rect
-          x="28"
-          y="55"
-          width="24"
-          height="16"
-          rx="3"
-          className="fill-secondary"
-        />
-        {/* Buttons */}
-        <circle cx="35" cy="62" r="3" className="fill-accent animate-pulse" />
-        <circle cx="45" cy="62" r="3" className="fill-ring" />
-        
-        {/* Arms */}
-        <rect
-          x="5"
-          y="50"
-          width="13"
-          height="6"
-          rx="3"
-          className="fill-muted-foreground"
-          style={{
-            transformOrigin: "18px 53px",
-            transform: `rotate(${legPhase % 2 === 0 ? -15 : 15}deg)`,
-          }}
-        />
-        <rect
-          x="62"
-          y="50"
-          width="13"
-          height="6"
-          rx="3"
-          className="fill-muted-foreground"
-          style={{
-            transformOrigin: "62px 53px",
-            transform: `rotate(${legPhase % 2 === 0 ? 15 : -15}deg)`,
-          }}
-        />
-        
-        {/* Legs */}
-        <rect
-          x="25"
-          y="78"
-          width="10"
-          height="22"
-          rx="3"
-          className="fill-muted-foreground"
-          style={{
-            transformOrigin: "30px 78px",
-            transform: `rotate(${
-              legPhase === 0 ? -20 : legPhase === 1 ? 0 : legPhase === 2 ? 20 : 0
-            }deg)`,
-          }}
-        />
-        <rect
-          x="45"
-          y="78"
-          width="10"
-          height="22"
-          rx="3"
-          className="fill-muted-foreground"
-          style={{
-            transformOrigin: "50px 78px",
-            transform: `rotate(${
-              legPhase === 0 ? 20 : legPhase === 1 ? 0 : legPhase === 2 ? -20 : 0
-            }deg)`,
-          }}
-        />
-        
-        {/* Feet */}
-        <ellipse
-          cx="30"
-          cy="100"
-          rx="8"
-          ry="4"
-          className="fill-primary"
-          style={{
-            transformOrigin: "30px 78px",
-            transform: `rotate(${
-              legPhase === 0 ? -20 : legPhase === 1 ? 0 : legPhase === 2 ? 20 : 0
-            }deg)`,
-          }}
-        />
-        <ellipse
-          cx="50"
-          cy="100"
-          rx="8"
-          ry="4"
-          className="fill-primary"
-          style={{
-            transformOrigin: "50px 78px",
-            transform: `rotate(${
-              legPhase === 0 ? 20 : legPhase === 1 ? 0 : legPhase === 2 ? -20 : 0
-            }deg)`,
-          }}
-        />
-      </svg>
+      <DotLottieReact
+        src={src}
+        loop
+        autoplay
+        style={{ width: "100%", height: "100%" }}
+      />
     </div>
-  )
+  );
 }

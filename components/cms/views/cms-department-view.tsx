@@ -1,0 +1,426 @@
+import {
+  Bot,
+  KeyRound,
+  LayoutTemplate,
+  Palette,
+  Settings2,
+  Trash2,
+} from "lucide-react"
+
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { hexToRgba } from "@/lib/color"
+import type { DepartmentConfig } from "@/lib/cms-types"
+import { cn } from "@/lib/utils"
+
+import { themeFields } from "../config/theme-fields"
+import { FieldBlock } from "../shared/field-block"
+import { SectionCard } from "../shared/section-card"
+import { cmsInputClass, cmsInsetClass, cmsTextareaClass } from "../shared/styles"
+
+interface CmsDepartmentViewProps {
+  department: DepartmentConfig
+  departmentCount: number
+  onRemoveDepartment: () => void
+  onUpdateDepartment: <K extends keyof DepartmentConfig>(
+    field: K,
+    value: DepartmentConfig[K],
+  ) => void
+  onUpdateIntegration: (
+    field: keyof DepartmentConfig["integration"],
+    value: string | number | boolean,
+  ) => void
+  onUpdateTheme: (field: keyof DepartmentConfig["theme"], value: string) => void
+}
+
+export function CmsDepartmentView({
+  department,
+  departmentCount,
+  onRemoveDepartment,
+  onUpdateDepartment,
+  onUpdateIntegration,
+  onUpdateTheme,
+}: CmsDepartmentViewProps) {
+  const previewBackground = department.theme.backgroundImageUrl
+    ? {
+        backgroundImage: `linear-gradient(180deg, ${hexToRgba(
+          department.theme.panel,
+          0.9,
+        )} 0%, ${hexToRgba(department.theme.surface, 0.86)} 100%), url(${department.theme.backgroundImageUrl})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }
+    : {
+        backgroundImage: `linear-gradient(135deg, ${department.theme.panel} 0%, ${department.theme.surface} 100%)`,
+      }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 rounded-[24px] border border-slate-200 bg-white px-4 py-4 shadow-[0_12px_36px_rgba(15,23,42,0.06)] md:flex-row md:items-start md:justify-between md:px-5">
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge
+              className="rounded-full px-3 py-1"
+              style={{ backgroundColor: department.theme.accentSoft, color: department.theme.badge }}
+            >
+              {department.zoneLabel}
+            </Badge>
+            <Badge
+              variant="outline"
+              className="rounded-full border-slate-200 bg-slate-50 px-3 py-1 text-slate-700"
+            >
+              {department.slug}
+            </Badge>
+            <Badge
+              className={cn(
+                "rounded-full px-3 py-1",
+                department.integration.apiKeyConfigured
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-amber-100 text-amber-700",
+              )}
+            >
+              <KeyRound className="h-3.5 w-3.5" />
+              {department.integration.apiKeyConfigured ? "Đã có API key" : "Thiếu API key"}
+            </Badge>
+          </div>
+          <div>
+            <h3 className="text-2xl font-semibold tracking-tight text-slate-950">
+              {department.name}
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600">{department.description}</p>
+          </div>
+        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onRemoveDepartment}
+          disabled={departmentCount <= 1}
+          className="rounded-full"
+        >
+          <Trash2 className="h-4 w-4" />
+          Xóa ngành hàng
+        </Button>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-4">
+          <SectionCard
+            title="Nội dung chính"
+            description="Phần định danh và nội dung hội thoại cốt lõi."
+            icon={Settings2}
+            contentClassName="grid gap-4 md:grid-cols-2"
+          >
+            <FieldBlock label="Tên hiển thị">
+              <Input
+                value={department.name}
+                onChange={(event) => onUpdateDepartment("name", event.target.value)}
+                className={cmsInputClass}
+              />
+            </FieldBlock>
+
+            <FieldBlock label="Kệ / vị trí">
+              <Input
+                value={department.zoneLabel}
+                onChange={(event) => onUpdateDepartment("zoneLabel", event.target.value)}
+                className={cmsInputClass}
+              />
+            </FieldBlock>
+
+            <FieldBlock label="Slug URL">
+              <Input
+                value={department.slug}
+                onChange={(event) => onUpdateDepartment("slug", event.target.value)}
+                className={cmsInputClass}
+              />
+            </FieldBlock>
+
+            <FieldBlock label="ID nội bộ">
+              <Input
+                value={department.id}
+                onChange={(event) => onUpdateDepartment("id", event.target.value)}
+                className={cmsInputClass}
+              />
+            </FieldBlock>
+
+            <FieldBlock label="Mô tả ngành hàng" className="md:col-span-2">
+              <Textarea
+                value={department.description}
+                onChange={(event) => onUpdateDepartment("description", event.target.value)}
+                className={`${cmsTextareaClass} min-h-[100px]`}
+              />
+            </FieldBlock>
+
+            <FieldBlock label="Lời chào mở đầu" className="md:col-span-2">
+              <Textarea
+                value={department.welcomeMessage}
+                onChange={(event) => onUpdateDepartment("welcomeMessage", event.target.value)}
+                className={`${cmsTextareaClass} min-h-[120px]`}
+              />
+            </FieldBlock>
+
+            <FieldBlock label="Placeholder ô chat">
+              <Input
+                value={department.placeholder}
+                onChange={(event) => onUpdateDepartment("placeholder", event.target.value)}
+                className={cmsInputClass}
+              />
+            </FieldBlock>
+
+            <FieldBlock
+              label="Prompt gợi ý"
+              hint="Mỗi dòng là một câu hỏi mẫu."
+              className="md:col-span-2"
+            >
+              <Textarea
+                value={department.suggestedPrompts.join("\n")}
+                onChange={(event) =>
+                  onUpdateDepartment(
+                    "suggestedPrompts",
+                    event.target.value
+                      .split("\n")
+                      .map((prompt) => prompt.trim())
+                      .filter(Boolean),
+                  )
+                }
+                className={`${cmsTextareaClass} min-h-[130px]`}
+              />
+            </FieldBlock>
+          </SectionCard>
+
+          <SectionCard
+            title="Backend"
+            description="Các tham số kết nối assistant và API riêng."
+            icon={Bot}
+            contentClassName="grid gap-4 md:grid-cols-2"
+          >
+            <FieldBlock label="Assistant slug">
+              <Input
+                value={department.integration.assistantSlug}
+                onChange={(event) => onUpdateIntegration("assistantSlug", event.target.value)}
+                className={cmsInputClass}
+              />
+            </FieldBlock>
+
+            <FieldBlock label="Timeout request (ms)">
+              <Input
+                type="number"
+                min={3000}
+                max={60000}
+                value={department.integration.requestTimeoutMs}
+                onChange={(event) =>
+                  onUpdateIntegration("requestTimeoutMs", Number(event.target.value) || 20000)
+                }
+                className={cmsInputClass}
+              />
+            </FieldBlock>
+
+            <FieldBlock label="Endpoint" className="md:col-span-2">
+              <Input
+                value={department.integration.endpoint}
+                onChange={(event) => onUpdateIntegration("endpoint", event.target.value)}
+                className={cmsInputClass}
+              />
+            </FieldBlock>
+
+            <FieldBlock label="User prefix">
+              <Input
+                value={department.integration.partnerUserPrefix}
+                onChange={(event) => onUpdateIntegration("partnerUserPrefix", event.target.value)}
+                className={cmsInputClass}
+              />
+            </FieldBlock>
+
+            <FieldBlock
+              label="API key riêng"
+              hint={
+                department.integration.apiKeyConfigured
+                  ? "Để trống nếu giữ key hiện tại."
+                  : "Nhập key riêng để tách luồng chatbot này."
+              }
+              className="md:col-span-2"
+            >
+              <Input
+                type="password"
+                value={department.integration.apiKey}
+                onChange={(event) => onUpdateIntegration("apiKey", event.target.value)}
+                className={cmsInputClass}
+                placeholder={
+                  department.integration.apiKeyConfigured
+                    ? "Để trống để giữ API key hiện tại"
+                    : "Nhập API key riêng"
+                }
+              />
+            </FieldBlock>
+          </SectionCard>
+
+          <SectionCard
+            title="Giao diện & media"
+            description="Màu sắc và ảnh hiển thị được gom chung để giảm việc cuộn nhiều khu vực."
+            icon={Palette}
+            contentClassName="space-y-4"
+          >
+            <div className="grid gap-4 md:grid-cols-2">
+              {themeFields.map(({ field, label }) => (
+                <FieldBlock key={field} label={label}>
+                  <div className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-2.5">
+                    <input
+                      type="color"
+                      value={department.theme[field]}
+                      onChange={(event) => onUpdateTheme(field, event.target.value)}
+                      className="h-9 w-10 rounded-lg border-0 bg-transparent"
+                    />
+                    <Input
+                      value={department.theme[field]}
+                      onChange={(event) => onUpdateTheme(field, event.target.value)}
+                      className="h-9 rounded-xl border-0 bg-white shadow-none"
+                    />
+                  </div>
+                </FieldBlock>
+              ))}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <FieldBlock label="Ảnh nền (URL)">
+                <Input
+                  value={department.theme.backgroundImageUrl ?? ""}
+                  onChange={(event) => onUpdateTheme("backgroundImageUrl", event.target.value)}
+                  className={cmsInputClass}
+                  placeholder="https://example.com/background.jpg"
+                />
+              </FieldBlock>
+              <FieldBlock label="Avatar chatbot (URL)">
+                <Input
+                  value={department.theme.botAvatarUrl ?? ""}
+                  onChange={(event) => onUpdateTheme("botAvatarUrl", event.target.value)}
+                  className={cmsInputClass}
+                  placeholder="https://example.com/avatar.jpg"
+                />
+              </FieldBlock>
+              <FieldBlock label="Logo trợ lý (URL)">
+                <Input
+                  value={department.theme.headerLogoUrl ?? ""}
+                  onChange={(event) => onUpdateTheme("headerLogoUrl", event.target.value)}
+                  className={cmsInputClass}
+                  placeholder="https://example.com/logo.jpg"
+                />
+              </FieldBlock>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <FieldBlock label="Text chờ phản hồi" hint="Hiệu ứng typewriter khi chờ AI trả lời.">
+                <Input
+                  value={department.theme.waitingText ?? ""}
+                  onChange={(event) => onUpdateTheme("waitingText", event.target.value)}
+                  className={cmsInputClass}
+                  placeholder="Đang tìm câu trả lời phù hợp cho bạn"
+                />
+              </FieldBlock>
+              <FieldBlock label="Tốc độ gõ (ms)" hint="Khoảng cách giữa mỗi ký tự (20–200).">
+                <Input
+                  type="number"
+                  min={20}
+                  max={200}
+                  value={department.theme.waitingTextSpeed ?? 60}
+                  onChange={(event) =>
+                    onUpdateTheme("waitingTextSpeed", event.target.value)
+                  }
+                  className={cmsInputClass}
+                />
+              </FieldBlock>
+              <FieldBlock label="Màu con trỏ gõ">
+                <div className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-2.5">
+                  <input
+                    type="color"
+                    value={department.theme.waitingCursorColor || department.theme.accent}
+                    onChange={(event) => onUpdateTheme("waitingCursorColor", event.target.value)}
+                    className="h-9 w-10 rounded-lg border-0 bg-transparent"
+                  />
+                  <Input
+                    value={department.theme.waitingCursorColor ?? ""}
+                    onChange={(event) => onUpdateTheme("waitingCursorColor", event.target.value)}
+                    className="h-9 rounded-xl border-0 bg-white shadow-none"
+                    placeholder={department.theme.accent}
+                  />
+                </div>
+              </FieldBlock>
+            </div>
+          </SectionCard>
+        </div>
+
+        <SectionCard
+          title="Preview"
+          description="Kiểm tra giao diện trước khi lưu"
+          icon={LayoutTemplate}
+          className="h-fit xl:sticky xl:top-4"
+        >
+          <div className="space-y-3">
+            <div className="overflow-hidden rounded-[20px] border border-slate-200 bg-white">
+              <div className="p-3" style={previewBackground}>
+                <div className="rounded-[18px] border border-slate-200/80 bg-white/90 p-4 backdrop-blur">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-950">{department.name}</p>
+                      <p className="text-xs text-slate-500">{department.zoneLabel}</p>
+                    </div>
+                    <Badge
+                      className="rounded-full px-3 py-1"
+                      style={{
+                        backgroundColor: department.theme.accentSoft,
+                        color: department.theme.badge,
+                      }}
+                    >
+                      Live preview
+                    </Badge>
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    <div
+                      className="ml-auto max-w-[88%] rounded-[18px] px-4 py-3 text-sm text-white"
+                      style={{ backgroundColor: department.theme.userBubble }}
+                    >
+                      {department.suggestedPrompts[0] || "Khách đang hỏi về sản phẩm tại quầy này."}
+                    </div>
+                    <div
+                      className="max-w-[88%] rounded-[18px] px-4 py-3 text-sm text-slate-900"
+                      style={{ backgroundColor: department.theme.assistantBubble }}
+                    >
+                      {department.welcomeMessage || "Lời chào chatbot sẽ hiển thị tại đây."}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className={`${cmsInsetClass} space-y-2 px-3 py-3`}>
+              <div className="flex items-center justify-between gap-4 text-sm">
+                <span className="text-slate-500">Assistant slug</span>
+                <span className="font-semibold text-slate-950">
+                  {department.integration.assistantSlug}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-4 text-sm">
+                <span className="text-slate-500">Prompt gợi ý</span>
+                <span className="font-semibold text-slate-950">
+                  {department.suggestedPrompts.length}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-4 text-sm">
+                <span className="text-slate-500">Media</span>
+                <span className="font-semibold text-slate-950">
+                  {department.theme.backgroundImageUrl ||
+                  department.theme.botAvatarUrl ||
+                  department.theme.headerLogoUrl
+                    ? "Đã có"
+                    : "Mặc định"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </SectionCard>
+      </div>
+    </div>
+  )
+}
