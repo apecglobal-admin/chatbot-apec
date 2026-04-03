@@ -22,13 +22,15 @@ interface ChatConversationProps {
   isListening: boolean
   isSpeaking: boolean
   isSubmitting: boolean
+  isTranscribing: boolean
   messages: ChatThreadMessage[]
   onInputChange: (value: string) => void
   onInputKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void
   onPromptSelect: (prompt: string) => void
   onStopSpeaking: () => void
   onSubmit: () => void
-  onToggleListening: () => void
+  onVoicePressStart: () => void
+  onVoicePressEnd: () => void
   placeholder: string
   recognitionSupported: boolean
   scrollRef: RefObject<HTMLDivElement | null>
@@ -45,13 +47,15 @@ export function ChatConversation({
   isListening,
   isSpeaking,
   isSubmitting,
+  isTranscribing,
   messages,
   onInputChange,
   onInputKeyDown,
   onPromptSelect,
   onStopSpeaking,
   onSubmit,
-  onToggleListening,
+  onVoicePressStart,
+  onVoicePressEnd,
   placeholder,
   recognitionSupported,
   scrollRef,
@@ -166,12 +170,14 @@ export function ChatConversation({
         </div>
 
         {/* Microphone — centered below textarea */}
-        <div className="mt-4 flex flex-col items-center gap-2">
+        <div className="relative z-50 mt-4 flex flex-col items-center gap-2">
           <VoiceButton
             accent={theme.accent}
             disabled={disabled || !recognitionSupported}
             isListening={isListening}
-            onClick={onToggleListening}
+            isTranscribing={isTranscribing}
+            onPressStart={onVoicePressStart}
+            onPressEnd={onVoicePressEnd}
           />
 
           {isSpeaking ? (
@@ -196,3 +202,4 @@ export function ChatConversation({
     </section>
   )
 }
+
