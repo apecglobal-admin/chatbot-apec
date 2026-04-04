@@ -20,6 +20,7 @@ const departmentThemeSchema = z.object({
   botAvatarUrl: z.string().optional(),
   headerLogoUrl: z.string().optional(),
   waitingIndicatorMode: z.enum(WAITING_INDICATOR_MODES).optional(),
+  waitingVideoUrl: z.string().optional(),
   waitingText: z.string().optional(),
   waitingTextSpeed: z.coerce.number().int().min(20).max(200).optional(),
   waitingCursorColor: z.string().optional(),
@@ -130,6 +131,7 @@ export const DEFAULT_CONFIG: CmsConfig = {
         assistantBubble: "#E8F4EC",
         badge: "#163E2D",
         waitingIndicatorMode: "text",
+        waitingVideoUrl: "",
       },
       integration: {
         endpoint: "https://rag-ai-jn9g.onrender.com/api/external/chat-stream",
@@ -163,6 +165,7 @@ export const DEFAULT_CONFIG: CmsConfig = {
         assistantBubble: "#FFF0DB",
         badge: "#7C2D12",
         waitingIndicatorMode: "text",
+        waitingVideoUrl: "",
       },
       integration: {
         endpoint: "https://rag-ai-jn9g.onrender.com/api/external/chat-stream",
@@ -196,6 +199,7 @@ export const DEFAULT_CONFIG: CmsConfig = {
         assistantBubble: "#E1F6F3",
         badge: "#134E4A",
         waitingIndicatorMode: "text",
+        waitingVideoUrl: "",
       },
       integration: {
         endpoint: "https://rag-ai-jn9g.onrender.com/api/external/chat-stream",
@@ -229,6 +233,7 @@ export const DEFAULT_CONFIG: CmsConfig = {
         assistantBubble: "#FFE3EF",
         badge: "#831843",
         waitingIndicatorMode: "text",
+        waitingVideoUrl: "",
       },
       integration: {
         endpoint: "https://rag-ai-jn9g.onrender.com/api/external/chat-stream",
@@ -271,6 +276,7 @@ function mapDepartmentRow(row: DepartmentRow, includeSecrets: boolean): Departme
       botAvatarUrl: row.theme.botAvatarUrl || "",
       headerLogoUrl: row.theme.headerLogoUrl || "",
       waitingIndicatorMode: row.theme.waitingIndicatorMode === "video" ? "video" : "text",
+      waitingVideoUrl: row.theme.waitingVideoUrl || "",
       waitingText: row.theme.waitingText || "",
       waitingTextSpeed: Number(row.theme.waitingTextSpeed) || 60,
       waitingCursorColor: row.theme.waitingCursorColor || "",
@@ -321,6 +327,7 @@ function sanitizeConfig(
           headerLogoUrl: department.theme.headerLogoUrl?.trim() || "",
           waitingIndicatorMode:
             department.theme.waitingIndicatorMode === "video" ? "video" : "text",
+          waitingVideoUrl: department.theme.waitingVideoUrl?.trim() || "",
           waitingText: department.theme.waitingText?.trim() || "",
           waitingTextSpeed: department.theme.waitingTextSpeed || 60,
           waitingCursorColor: department.theme.waitingCursorColor?.trim() || "",

@@ -69,7 +69,7 @@ export function CmsSidebar({
           </Link>
         </div>
 
-        <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-2">
+        <div className="rounded-[20px] border border-slate-500 bg-slate-50 p-2">
           {[
             { key: "dashboard" as const, label: "Bảng điều khiển", icon: LayoutDashboard },
           ].map((item) => {
@@ -97,7 +97,7 @@ export function CmsSidebar({
           })}
         </div>
 
-        <div className="rounded-[20px] border border-slate-200 bg-white">
+        <div className="rounded-[20px] border border-slate-500 bg-white">
           <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-3 py-3">
             <div>
               <p className="text-sm font-semibold text-slate-950">Ngành hàng</p>

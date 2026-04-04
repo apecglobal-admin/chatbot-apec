@@ -26,6 +26,7 @@ export function emptyDepartment(index: number): DepartmentConfig {
       botAvatarUrl: "",
       headerLogoUrl: "",
       waitingIndicatorMode: "text",
+      waitingVideoUrl: "",
     },
     integration: {
       endpoint: "https://rag-ai-jn9g.onrender.com/api/external/chat-stream",

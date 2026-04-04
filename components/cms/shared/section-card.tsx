@@ -30,17 +30,17 @@ export function SectionCard({
         className,
       )}
     >
-      <CardHeader className="border-b border-slate-200 bg-slate-100 px-4 py-3 md:px-5">
+      <CardHeader className="border-b border-slate-200 px-4 py-3 md:px-5 bg-emerald-700">
         <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-3 ">
             <div className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700">
               <Icon className="h-4 w-4" />
             </div>
             <div className="space-y-1">
-              <CardTitle className="text-base font-semibold tracking-tight text-slate-950">
+              <CardTitle className="text-base font-bold tracking-tight text-white">
                 {title}
               </CardTitle>
-              <CardDescription className="max-w-3xl text-sm leading-5 text-slate-600">
+              <CardDescription className="max-w-3xl text-sm leading-5 text-slate-200">
                 {description}
               </CardDescription>
             </div>
@@ -48,7 +48,7 @@ export function SectionCard({
           {action ? <div className="shrink-0">{action}</div> : null}
         </div>
       </CardHeader>
-      <CardContent className={cn("px-4 py-4 md:px-5 md:py-5", contentClassName)}>
+      <CardContent className={cn("px-4 py-4 md:px-5 md:py-5 -mt-4", contentClassName)}>
         {children}
       </CardContent>
     </Card>

@@ -12,6 +12,7 @@ export interface DepartmentTheme {
   botAvatarUrl?: string
   headerLogoUrl?: string
   waitingIndicatorMode?: WaitingIndicatorMode
+  waitingVideoUrl?: string
   waitingText?: string
   waitingTextSpeed?: number
   waitingCursorColor?: string
