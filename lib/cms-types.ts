@@ -1,3 +1,5 @@
+export type WaitingIndicatorMode = "text" | "video"
+
 export interface DepartmentTheme {
   accent: string
   accentSoft: string
@@ -9,6 +11,8 @@ export interface DepartmentTheme {
   backgroundImageUrl?: string
   botAvatarUrl?: string
   headerLogoUrl?: string
+  waitingIndicatorMode?: WaitingIndicatorMode
+  waitingVideoUrl?: string
   waitingText?: string
   waitingTextSpeed?: number
   waitingCursorColor?: string

@@ -2,38 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
-interface SpeechRecognitionResultLike {
-  isFinal: boolean
-  0: {
-    transcript: string
-  }
-}
-
-interface SpeechRecognitionEventLike {
-  resultIndex: number
-  results: ArrayLike<SpeechRecognitionResultLike>
-}
-
-interface BrowserSpeechRecognition {
-  continuous: boolean
-  interimResults: boolean
-  lang: string
-  onend: (() => void) | null
-  onerror: ((event: { error: string }) => void) | null
-  onresult: ((event: SpeechRecognitionEventLike) => void) | null
-  onstart: (() => void) | null
-  abort: () => void
-  start: () => void
-  stop: () => void
-}
-
-declare global {
-  interface Window {
-    SpeechRecognition?: new () => BrowserSpeechRecognition
-    webkitSpeechRecognition?: new () => BrowserSpeechRecognition
-  }
-}
-
 interface UseVoiceAssistantOptions {
   onTranscriptChange: (text: string) => void
   onTranscriptComplete: (text: string) => void
@@ -47,14 +15,22 @@ export function useVoiceAssistant({
 }: UseVoiceAssistantOptions) {
   const [isListening, setIsListening] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
-  const [recognitionSupported, setRecognitionSupported] = useState(false)
+  const [isTranscribing, setIsTranscribing] = useState(false)
   const [playbackRate, setPlaybackRate] = useState<number>(1.2)
 
-  const recognitionRef = useRef<BrowserSpeechRecognition | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const transcriptRef = useRef("")
-  
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+  const streamRef = useRef<MediaStream | null>(null)
   const currentTranscriptRef = useRef(currentTranscript)
+
+  // Track whether to auto-submit when recording finishes
+  const shouldSubmitRef = useRef(false)
+
+  // Track if VAD detected actual speech during this recording
+  const hasSpeechRef = useRef(false)
+  const vadRef = useRef<any>(null)
+
   useEffect(() => {
     currentTranscriptRef.current = currentTranscript
   }, [currentTranscript])
@@ -71,77 +47,183 @@ export function useVoiceAssistant({
         audioRef.current.pause()
         audioRef.current.src = ""
       }
+      if (vadRef.current) {
+        void vadRef.current.destroy()
+      }
     }
   }, [])
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return
+  const sendToGroq = useCallback(
+    async (audioBlob: Blob, submit: boolean) => {
+      // Skip tiny recordings or if VAD didn't detect speech
+      if (audioBlob.size < 1000) {
+        console.log("[Voice Assistant] Recording too short, skipping", {
+          size: audioBlob.size,
+        })
+        return
+      }
+
+      if (!hasSpeechRef.current) {
+        console.log("[Voice Assistant] VAD detected no speech, skipping API call to avoid hallucinations")
+        return
+      }
+
+      setIsTranscribing(true)
+      try {
+        const formData = new FormData()
+        formData.append("audio", audioBlob, "recording.webm")
+
+        console.log("[Voice Assistant] Sending audio to transcribe API", {
+          size: audioBlob.size,
+          submit,
+        })
+
+        const response = await fetch("/api/transcribe", {
+          method: "POST",
+          body: formData,
+        })
+
+        if (!response.ok) {
+          console.warn("[Voice Assistant] Transcription API returned", {
+            status: response.status,
+            statusText: response.statusText,
+          })
+          return
+        }
+
+        const data = (await response.json()) as { text?: string }
+        const transcribedText = data.text?.trim() || ""
+
+        console.log("[Voice Assistant] Transcription response", {
+          text: transcribedText,
+          submit,
+        })
+
+        if (transcribedText) {
+          const prefix = currentTranscriptRef.current
+          const fullText = prefix
+            ? `${prefix} ${transcribedText}`
+            : transcribedText
+
+          console.log("[Voice Assistant] Updating transcript", {
+            prefix,
+            transcribedText,
+            fullText,
+          })
+
+          onTranscriptChange(fullText)
+
+          if (submit) {
+            setTimeout(() => {
+              onTranscriptComplete(fullText)
+            }, 50)
+          }
+        }
+      } catch (error) {
+        console.error("[Voice Assistant] Transcription error:", error)
+      } finally {
+        setIsTranscribing(false)
+      }
+    },
+    [onTranscriptChange, onTranscriptComplete],
+  )
+
+  const startListening = useCallback(async () => {
+    if (isListening || isTranscribing) {
+      return false
     }
 
-    const SpeechRecognitionApi =
-      window.SpeechRecognition ?? window.webkitSpeechRecognition
+    stopSpeakingRef.current()
 
-    if (!SpeechRecognitionApi) {
-      setRecognitionSupported(false)
-      return
-    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      streamRef.current = stream
+      audioChunksRef.current = []
+      shouldSubmitRef.current = false
+      hasSpeechRef.current = false // Reset speech flag
 
-    setRecognitionSupported(true)
+      // Initialize VAD on the captured stream
+      try {
+        const { MicVAD } = await import("@ricky0123/vad-web")
+        if (vadRef.current) {
+          await vadRef.current.destroy()
+        }
+        vadRef.current = await MicVAD.new({
+          baseAssetPath: "/",
+          onnxWASMBasePath: "/",
+          getStream: async () => stream,
+          onSpeechStart: () => {
+            hasSpeechRef.current = true
+            console.log("[Voice Assistant] VAD: Speech detected")
+          },
+        })
+        await vadRef.current.start()
+      } catch (vadError) {
+        console.warn("[Voice Assistant] VAD initialization failed, defaulting to true:", vadError)
+        hasSpeechRef.current = true // Fallback if VAD fails to load
+      }
 
-    const recognition = new SpeechRecognitionApi()
-    recognition.lang = "vi-VN"
-    recognition.continuous = true
-    recognition.interimResults = true
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+          ? "audio/webm;codecs=opus"
+          : "audio/webm",
+      })
 
-    recognition.onstart = () => {
-      const initial = currentTranscriptRef.current
-      transcriptRef.current = initial ? `${initial} ` : ""
-      setIsListening(true)
-      onTranscriptChange(transcriptRef.current)
-    }
-
-    recognition.onresult = (event) => {
-      let interimTranscript = ""
-      let finalTranscript = ""
-
-      for (let index = event.resultIndex; index < event.results.length; index += 1) {
-        const result = event.results[index]
-
-        if (result.isFinal) {
-          finalTranscript += result[0].transcript
-        } else {
-          interimTranscript += result[0].transcript
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          console.log("[Voice Assistant] Recording data available", {
+            size: event.data.size,
+            totalChunks: audioChunksRef.current.length + 1,
+          })
+          audioChunksRef.current.push(event.data)
         }
       }
 
-      if (finalTranscript) {
-        transcriptRef.current += `${finalTranscript} `
+      mediaRecorder.onstop = () => {
+        console.log("[Voice Assistant] MediaRecorder stopped")
+        if (vadRef.current) {
+          void vadRef.current.pause()
+        }
+        // Clean up the media stream
+        if (streamRef.current) {
+          for (const track of streamRef.current.getTracks()) {
+            track.stop()
+          }
+          streamRef.current = null
+        }
+
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: "audio/webm",
+        })
+
+        console.log("[Voice Assistant] Audio blob created", {
+          size: audioBlob.size,
+          chunks: audioChunksRef.current.length,
+          shouldSubmit: shouldSubmitRef.current,
+        })
+
+        // Transcribe logic
+        if (audioBlob.size > 0) {
+          void sendToGroq(audioBlob, shouldSubmitRef.current)
+        }
+
+        setIsListening(false)
+        mediaRecorderRef.current = null
       }
 
-      const fullTranscript = `${transcriptRef.current}${interimTranscript}`.trim()
-      console.log("[Voice Assistant] Nghe được:", fullTranscript)
-      onTranscriptChange(fullTranscript)
-    }
-
-    // Keep it updated if currentTranscript changes while not listening?
-    // Not strictly needed, we just capture it on start.
-
-    recognition.onerror = (event) => {
-      console.error("Speech recognition error", event.error)
+      mediaRecorderRef.current = mediaRecorder
+      mediaRecorder.start()
+      setIsListening(true)
+      return true
+    } catch (error) {
+      console.error("[Voice Assistant] Microphone access error:", error)
       setIsListening(false)
+      return false
     }
+  }, [isListening, isTranscribing, sendToGroq])
 
-    recognition.onend = () => {
-      setIsListening(false)
-    }
-
-    recognitionRef.current = recognition
-
-    return () => {
-      recognition.abort()
-    }
-  }, [onTranscriptChange])
+  // Keep stopSpeaking in a ref so startListening doesn't depend on it
+  const stopSpeakingRef = useRef(() => {})
 
   const stopSpeaking = useCallback(() => {
     if (audioRef.current) {
@@ -150,6 +232,34 @@ export function useVoiceAssistant({
     }
     setIsSpeaking(false)
   }, [])
+
+  useEffect(() => {
+    stopSpeakingRef.current = stopSpeaking
+  }, [stopSpeaking])
+
+  const stopListening = useCallback(
+    (options?: { submit?: boolean }) => {
+      if (!mediaRecorderRef.current || !isListening) {
+        return
+      }
+
+      shouldSubmitRef.current = options?.submit ?? false
+
+      if (mediaRecorderRef.current.state === "recording") {
+        mediaRecorderRef.current.stop()
+      }
+    },
+    [isListening],
+  )
+
+  const toggleListening = useCallback(() => {
+    if (isListening) {
+      stopListening({ submit: true })
+      return true
+    }
+
+    return startListening()
+  }, [isListening, startListening, stopListening])
 
   const speak = useCallback(
     async (text: string) => {
@@ -183,12 +293,12 @@ export function useVoiceAssistant({
 
         if (audioRef.current) {
           audioRef.current.src = url
-          
+
           audioRef.current.onended = () => {
             setIsSpeaking(false)
             URL.revokeObjectURL(url)
           }
-          
+
           audioRef.current.onerror = () => {
             setIsSpeaking(false)
             URL.revokeObjectURL(url)
@@ -201,60 +311,15 @@ export function useVoiceAssistant({
         setIsSpeaking(false)
       }
     },
-    [stopSpeaking],
+    [stopSpeaking, playbackRate],
   )
-
-  const startListening = useCallback(() => {
-    if (!recognitionRef.current) {
-      return false
-    }
-
-    stopSpeaking()
-
-    try {
-      recognitionRef.current.start()
-    } catch (error) {
-      console.error(error)
-    }
-
-    return true
-  }, [stopSpeaking])
-
-  const stopListening = useCallback(
-    (options?: { submit?: boolean }) => {
-      if (!recognitionRef.current) {
-        return
-      }
-
-      if (isListening) {
-        recognitionRef.current.stop()
-        setIsListening(false)
-      }
-
-      const finalTranscript = transcriptRef.current.trim()
-
-      if (options?.submit && finalTranscript) {
-        onTranscriptChange(finalTranscript)
-        onTranscriptComplete(finalTranscript)
-      }
-    },
-    [isListening, onTranscriptChange, onTranscriptComplete],
-  )
-
-  const toggleListening = useCallback(() => {
-    if (isListening) {
-      stopListening({ submit: true })
-      return true
-    }
-
-    return startListening()
-  }, [isListening, startListening, stopListening])
 
   return {
     isListening,
     isSpeaking,
+    isTranscribing,
     playbackRate,
-    recognitionSupported,
+    recognitionSupported: true, // Groq API always available server-side
     setPlaybackRate,
     speak,
     startListening,
@@ -263,3 +328,5 @@ export function useVoiceAssistant({
     toggleListening,
   }
 }
+
+

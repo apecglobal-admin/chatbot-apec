@@ -30,11 +30,12 @@ export function ChatbotShell({
   const {
     isListening,
     isSpeaking,
+    isTranscribing,
     recognitionSupported,
     speak,
+    startListening,
     stopListening,
     stopSpeaking,
-    toggleListening,
   } = useVoiceAssistant({
     onTranscriptChange: setInputValue,
     onTranscriptComplete: (text) => {
@@ -111,6 +112,7 @@ export function ChatbotShell({
           isListening={isListening}
           isSpeaking={isSpeaking}
           isSubmitting={isSubmitting}
+          isTranscribing={isTranscribing}
           messages={messages}
           onInputChange={setInputValue}
           onInputKeyDown={(event) => {
@@ -124,9 +126,14 @@ export function ChatbotShell({
           onSubmit={() => {
             handleSubmit(inputValue)
           }}
-          onToggleListening={() => {
+          onVoicePressStart={() => {
             if (recognitionSupported) {
-              toggleListening()
+              startListening()
+            }
+          }}
+          onVoicePressEnd={() => {
+            if (recognitionSupported) {
+              stopListening({ submit: true })
             }
           }}
           placeholder={department.placeholder || ""}

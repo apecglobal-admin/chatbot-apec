@@ -1,6 +1,6 @@
 "use client"
 
-import { Mic, Square } from "lucide-react"
+import { Loader2, Mic } from "lucide-react"
 
 import { hexToRgba } from "@/lib/color"
 import { cn } from "@/lib/utils"
@@ -9,15 +9,22 @@ interface VoiceButtonProps {
   accent: string
   disabled: boolean
   isListening: boolean
-  onClick: () => void
+  isTranscribing?: boolean
+  onPressStart: () => void
+  onPressEnd: () => void
 }
 
 export function VoiceButton({
   accent,
   disabled,
   isListening,
-  onClick,
+  isTranscribing = false,
+  onPressStart,
+  onPressEnd,
 }: VoiceButtonProps) {
+  const showWave = isListening
+  const showLoader = isTranscribing && !isListening
+
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="relative flex h-28 w-28 items-center justify-center">
@@ -30,7 +37,7 @@ export function VoiceButton({
         <span
           className={cn(
             "absolute inset-2 rounded-full border border-dashed transition",
-            isListening ? "opacity-0 scale-110" : "opacity-40 scale-100",
+            showWave ? "opacity-0 scale-110" : "opacity-40 scale-100",
           )}
           style={{
             borderColor: hexToRgba(accent, 0.35),
@@ -38,21 +45,40 @@ export function VoiceButton({
         />
         <button
           type="button"
-          onClick={onClick}
-          disabled={disabled}
+          onPointerDown={(e) => {
+            // Prevent default to avoid text selection on long press (mobile)
+            e.preventDefault()
+            if (!disabled) {
+              onPressStart()
+            }
+          }}
+          onPointerUp={() => {
+            if (!disabled && isListening) {
+              onPressEnd()
+            }
+          }}
+          onPointerLeave={() => {
+            // If finger/cursor leaves the button while pressing, also stop
+            if (!disabled && isListening) {
+              onPressEnd()
+            }
+          }}
+          onContextMenu={(e) => e.preventDefault()} // Prevent context menu on long press
+          disabled={disabled || isTranscribing}
           className={cn(
-            "relative z-10 flex h-20 w-20 items-center justify-center rounded-full text-white transition-all duration-300",
-            isListening ? "scale-[1.15]" : "hover:scale-[1.03]",
-            disabled ? "cursor-not-allowed opacity-50" : "",
+            "relative z-10 flex h-20 w-20 select-none items-center justify-center rounded-full text-white transition-all duration-300",
+            showWave ? "scale-[1.15]" : "hover:scale-[1.03]",
+            disabled || isTranscribing ? "cursor-not-allowed opacity-50" : "",
           )}
           style={{
-            backgroundColor: isListening ? "#F43F5E" : accent,
-            boxShadow: isListening
+            backgroundColor: showWave ? "#F43F5E" : accent,
+            boxShadow: showWave
               ? "0 18px 36px rgba(244,63,94,0.35)"
               : `0 18px 36px ${hexToRgba(accent, 0.32)}`,
+            touchAction: "none", // Prevent scroll/zoom on mobile touch
           }}
         >
-          {isListening ? (
+          {showWave ? (
             <>
               <style>
                 {`
@@ -75,6 +101,8 @@ export function VoiceButton({
                 ))}
               </div>
             </>
+          ) : showLoader ? (
+            <Loader2 className="h-8 w-8 animate-spin" />
           ) : (
             <Mic className="h-8 w-8" />
           )}
@@ -83,7 +111,11 @@ export function VoiceButton({
 
       <div className="space-y-1 text-center">
         <p className="text-sm font-semibold text-slate-900">
-          {isListening ? "Đang nghe, nhấn để gửi" : "Nhấn để nói"}
+          {showWave
+            ? "Đang nghe... thả để gửi"
+            : showLoader
+              ? "Đang xử lý..."
+              : "Giữ để nói"}
         </p>
       </div>
     </div>

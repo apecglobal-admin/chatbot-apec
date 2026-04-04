@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { KeyRound, Trash2 } from "lucide-react"
 
 import { CmsHeader } from "@/components/cms/layout/cms-header"
 import { CmsSidebar } from "@/components/cms/layout/cms-sidebar"
@@ -8,10 +9,46 @@ import type { CmsView } from "@/components/cms/types"
 import { emptyDepartment } from "@/components/cms/utils"
 import { CmsDashboardView } from "@/components/cms/views/cms-dashboard-view"
 import { CmsDepartmentView } from "@/components/cms/views/cms-department-view"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import type { CmsConfig, DepartmentConfig } from "@/lib/cms-types"
+import { cn } from "@/lib/utils"
 
 interface CmsShellProps {
   initialConfig: CmsConfig
+}
+
+const skipUpperCase = [
+  "backgroundImageUrl",
+  "botAvatarUrl",
+  "headerLogoUrl",
+  "waitingIndicatorMode",
+  "waitingVideoUrl",
+  "waitingText",
+  "waitingTextSpeed",
+  "waitingCursorColor",
+]
+
+function buildConfigWithThemeUpdate(
+  current: CmsConfig,
+  index: number,
+  field: keyof DepartmentConfig["theme"],
+  value: string,
+) {
+  return {
+    ...current,
+    departments: current.departments.map((department, departmentIndex) =>
+      departmentIndex === index
+        ? {
+            ...department,
+            theme: {
+              ...department.theme,
+              [field]: skipUpperCase.includes(field) ? value : value.toUpperCase(),
+            },
+          }
+        : department,
+    ),
+  }
 }
 
 export function CmsShell({ initialConfig }: CmsShellProps) {
@@ -53,7 +90,36 @@ export function CmsShell({ initialConfig }: CmsShellProps) {
     }
   }, [isDirty])
 
+  async function persistConfig(nextConfig: CmsConfig, successMessage: string) {
+    setIsSaving(true)
+    setStatusMessage("")
+    setErrorMessage("")
 
+    try {
+      const response = await fetch("/api/cms-config", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(nextConfig),
+      })
+
+      const data = (await response.json()) as { config?: CmsConfig; error?: string }
+
+      if (!response.ok || !data.config) {
+        throw new Error(data.error ?? "Không thể lưu cấu hình CMS.")
+      }
+
+      setConfig(data.config)
+      setSavedSnapshot(JSON.stringify(data.config))
+      setStatusMessage(successMessage)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Đã xảy ra lỗi khi lưu cấu hình.")
+      throw error
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   function updateDepartment<K extends keyof DepartmentConfig>(
     index: number,
@@ -99,31 +165,17 @@ export function CmsShell({ initialConfig }: CmsShellProps) {
     field: keyof DepartmentConfig["theme"],
     value: string,
   ) {
-    const skipUpperCase = [
-      "backgroundImageUrl",
-      "botAvatarUrl",
-      "headerLogoUrl",
-      "waitingText",
-      "waitingTextSpeed",
-      "waitingCursorColor",
-    ]
+    setConfig((current) => buildConfigWithThemeUpdate(current, index, field, value))
+  }
 
-    setConfig((current) => ({
-      ...current,
-      departments: current.departments.map((department, departmentIndex) =>
-        departmentIndex === index
-          ? {
-              ...department,
-              theme: {
-                ...department.theme,
-                [field]: skipUpperCase.includes(field)
-                  ? value
-                  : value.toUpperCase(),
-              },
-            }
-          : department,
-      ),
-    }))
+  async function uploadThemeMedia(
+    index: number,
+    field: keyof DepartmentConfig["theme"],
+    value: string,
+  ) {
+    const nextConfig = buildConfigWithThemeUpdate(config, index, field, value)
+    setConfig(nextConfig)
+    await persistConfig(nextConfig, "Đã lưu media và cấu hình CMS.")
   }
 
   function openDepartment(index: number) {
@@ -156,46 +208,66 @@ export function CmsShell({ initialConfig }: CmsShellProps) {
   }
 
   async function handleSave() {
-    setIsSaving(true)
-    setStatusMessage("")
-    setErrorMessage("")
-
     try {
-      const response = await fetch("/api/cms-config", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(config),
-      })
-
-      const data = (await response.json()) as { config?: CmsConfig; error?: string }
-
-      if (!response.ok || !data.config) {
-        throw new Error(data.error ?? "Không thể lưu cấu hình CMS.")
-      }
-
-      setConfig(data.config)
-      setSavedSnapshot(JSON.stringify(data.config))
-      setStatusMessage("Đã lưu cấu hình mới.")
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "Đã xảy ra lỗi khi lưu cấu hình.",
-      )
-    } finally {
-      setIsSaving(false)
+      await persistConfig(config, "Đã lưu cấu hình mới.")
+    } catch {
+      return
     }
   }
 
   const currentViewTitle =
-    activeView === "dashboard"
-      ? "Bảng điều khiển CMS"
-      : activeDepartment?.name ?? "Ngành hàng"
+    activeView === "dashboard" ? "Bảng điều khiển CMS" : activeDepartment?.name ?? "Ngành hàng"
 
   const currentViewDescription =
     activeView === "dashboard"
       ? "Theo dõi những mục còn thiếu và mở nhanh tới khu vực cần chỉnh sửa."
       : "Chỉnh nội dung, backend và giao diện của từng chatbot ngành hàng."
+
+  const headerMeta =
+    activeView === "department" && activeDepartment ? (
+      <>
+        <Badge
+          className="rounded-full px-3 py-1"
+          style={{
+            backgroundColor: activeDepartment.theme.accentSoft,
+            color: activeDepartment.theme.badge,
+          }}
+        >
+          {activeDepartment.zoneLabel}
+        </Badge>
+        <Badge
+          variant="outline"
+          className="rounded-full border-slate-200 bg-slate-50 px-3 py-1 text-slate-700"
+        >
+          {activeDepartment.slug}
+        </Badge>
+        <Badge
+          className={cn(
+            "rounded-full px-3 py-1",
+            activeDepartment.integration.apiKeyConfigured
+              ? "bg-emerald-100 text-emerald-700"
+              : "bg-amber-100 text-amber-700",
+          )}
+        >
+          <KeyRound className="h-3.5 w-3.5" />
+          {activeDepartment.integration.apiKeyConfigured ? "Đã có API key" : "Thiếu API key"}
+        </Badge>
+      </>
+    ) : undefined
+
+  const headerAction =
+    activeView === "department" && activeDepartment ? (
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => removeDepartment(activeDepartmentIndex)}
+        disabled={config.departments.length <= 1}
+        className="h-11 rounded-full"
+      >
+        <Trash2 className="h-4 w-4" />
+        Xóa ngành hàng
+      </Button>
+    ) : undefined
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#edf2f7_0%,#f7f9fb_100%)] px-3 py-3 md:px-4 md:py-4">
@@ -221,6 +293,9 @@ export function CmsShell({ initialConfig }: CmsShellProps) {
             isSaving={isSaving}
             isDirty={isDirty}
             onSave={() => void handleSave()}
+            meta={headerMeta}
+            action={headerAction}
+            variant={activeView === "department" ? "compact" : "default"}
           />
 
           {activeView === "dashboard" ? (
@@ -234,13 +309,9 @@ export function CmsShell({ initialConfig }: CmsShellProps) {
             />
           ) : null}
 
-
-
           {activeView === "department" && activeDepartment ? (
             <CmsDepartmentView
               department={activeDepartment}
-              departmentCount={config.departments.length}
-              onRemoveDepartment={() => removeDepartment(activeDepartmentIndex)}
               onUpdateDepartment={(field, value) =>
                 updateDepartment(activeDepartmentIndex, field, value)
               }
@@ -249,6 +320,9 @@ export function CmsShell({ initialConfig }: CmsShellProps) {
               }
               onUpdateTheme={(field, value) =>
                 updateTheme(activeDepartmentIndex, field, value)
+              }
+              onUploadThemeMedia={(field, value) =>
+                uploadThemeMedia(activeDepartmentIndex, field, value)
               }
             />
           ) : null}

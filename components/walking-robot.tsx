@@ -72,7 +72,7 @@ export function WalkingRobot({
   return (
     <div
       ref={containerRef}
-      className="fixed bottom-0 z-[9999] pointer-events-none will-change-transform"
+      className="fixed bottom-0 z-40 pointer-events-none will-change-transform"
       style={{
         width: size,
         height: size,
@@ -89,3 +89,4 @@ export function WalkingRobot({
     </div>
   );
 }
+

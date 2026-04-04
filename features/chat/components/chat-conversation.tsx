@@ -1,7 +1,7 @@
-"use client"
+﻿"use client"
 
 import type { KeyboardEvent, RefObject } from "react"
-import { Send, Volume2, VolumeX, Waves } from "lucide-react"
+import { Send, VolumeX } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -22,13 +22,15 @@ interface ChatConversationProps {
   isListening: boolean
   isSpeaking: boolean
   isSubmitting: boolean
+  isTranscribing: boolean
   messages: ChatThreadMessage[]
   onInputChange: (value: string) => void
   onInputKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void
   onPromptSelect: (prompt: string) => void
   onStopSpeaking: () => void
   onSubmit: () => void
-  onToggleListening: () => void
+  onVoicePressStart: () => void
+  onVoicePressEnd: () => void
   placeholder: string
   recognitionSupported: boolean
   scrollRef: RefObject<HTMLDivElement | null>
@@ -45,13 +47,15 @@ export function ChatConversation({
   isListening,
   isSpeaking,
   isSubmitting,
+  isTranscribing,
   messages,
   onInputChange,
   onInputKeyDown,
   onPromptSelect,
   onStopSpeaking,
   onSubmit,
-  onToggleListening,
+  onVoicePressStart,
+  onVoicePressEnd,
   placeholder,
   recognitionSupported,
   scrollRef,
@@ -59,30 +63,26 @@ export function ChatConversation({
   theme,
 }: ChatConversationProps) {
   const disabled = !apiConfigured || isSubmitting
-  const hasMessages = messages.length > 1 // more than just welcome
+  const shouldShowWaitingState =
+    isSubmitting &&
+    !(
+      messages.length > 0 &&
+      messages[messages.length - 1].role === "assistant" &&
+      messages[messages.length - 1].content.length > 0
+    )
+  const waitingIndicatorMode = theme.waitingIndicatorMode === "video" ? "video" : "text"
+  const waitingVideoUrl = theme.waitingVideoUrl || "/Robot-dao-boi.webm"
 
   return (
     <section className="relative flex h-full flex-1 flex-col overflow-hidden rounded-[32px] border border-white/70 bg-white/84 shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
-      {/* Header */}
-      <div 
-        className="px-6 py-4 md:px-8"
-        style={{ backgroundColor: theme.accent }}
-      >
-        <h2 className="text-lg font-bold text-white md:text-xl">
-          {departmentName}
-        </h2>
+      <div className="px-6 py-4 md:px-8" style={{ backgroundColor: theme.accent }}>
+        <h2 className="text-lg font-bold text-white md:text-xl">{departmentName}</h2>
         {departmentDescription ? (
-          <p className="mt-1 text-sm text-white/90">
-            {departmentDescription}
-          </p>
+          <p className="mt-1 text-sm text-white/90">{departmentDescription}</p>
         ) : null}
       </div>
 
-      {/* Messages */}
-      <div
-        ref={scrollRef}
-        className="flex-1 space-y-6 overflow-y-auto px-6 py-6 md:px-8"
-      >
+      <div ref={scrollRef} className="flex-1 space-y-6 overflow-y-auto px-6 py-6 md:px-8">
         {messages.map((message) => (
           <ChatMessage
             key={message.id}
@@ -93,16 +93,33 @@ export function ChatConversation({
           />
         ))}
 
-        {isSubmitting && !(messages.length > 0 && messages[messages.length - 1].role === "assistant" && messages[messages.length - 1].content.length > 0) ? (
-          <div className="mr-auto flex max-w-[90%] items-center gap-3 rounded-[24px] border bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
-            <FakeStreamingText
-              text={theme.waitingText || "Đang tìm câu trả lời phù hợp cho bạn"}
-              speed={theme.waitingTextSpeed || 60}
-              cursorColor={theme.waitingCursorColor || theme.accent}
-            />
-          </div>
+        {shouldShowWaitingState ? (
+          waitingIndicatorMode === "video" ? (
+            <div className="mr-auto rounded-[24px] border bg-white px-3 py-3 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
+              <video
+                autoPlay
+                loop
+                muted
+                playsInline
+                preload="auto"
+                aria-label="AI is preparing a response"
+                className="h-28 w-28 rounded-[18px] object-contain"
+              >
+                <source src={waitingVideoUrl} />
+              </video>
+            </div>
+          ) : (
+            <div className="mr-auto max-w-[90%] rounded-[24px] border bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
+              <div className="flex items-center gap-3">
+                <FakeStreamingText
+                  text={theme.waitingText || "Đang tìm câu trả lời phù hợp cho bạn"}
+                  speed={theme.waitingTextSpeed || 60}
+                  cursorColor={theme.waitingCursorColor || theme.accent}
+                />
+              </div>
+            </div>
+          )
         ) : null}
-
 
         {errorMessage ? (
           <div className="rounded-[24px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
@@ -111,9 +128,7 @@ export function ChatConversation({
         ) : null}
       </div>
 
-      {/* Bottom controls overlay — inside the chat frame */}
       <div className="relative border-t border-slate-200/60 bg-gradient-to-t from-white/95 via-white/90 to-white/70 px-5 pb-5 pt-4 md:px-8">
-        {/* Suggested prompts — floating above input */}
         {suggestedPrompts.length > 0 ? (
           <div className="mb-4">
             <p className="mb-2 text-center text-xs font-medium uppercase tracking-[0.2em] text-slate-400">
@@ -139,7 +154,6 @@ export function ChatConversation({
           </div>
         ) : null}
 
-        {/* Textarea input row */}
         <div className="flex items-end gap-3">
           <div className="flex-1 rounded-[20px] border border-slate-200 bg-white/90 px-1.5 shadow-sm transition focus-within:border-slate-300 focus-within:shadow-md">
             <Textarea
@@ -165,13 +179,14 @@ export function ChatConversation({
           </Button>
         </div>
 
-        {/* Microphone — centered below textarea */}
-        <div className="mt-4 flex flex-col items-center gap-2">
+        <div className="relative z-50 mt-4 flex flex-col items-center gap-2">
           <VoiceButton
             accent={theme.accent}
             disabled={disabled || !recognitionSupported}
             isListening={isListening}
-            onClick={onToggleListening}
+            isTranscribing={isTranscribing}
+            onPressStart={onVoicePressStart}
+            onPressEnd={onVoicePressEnd}
           />
 
           {isSpeaking ? (
