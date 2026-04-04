@@ -10,6 +10,13 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { hexToRgba } from "@/lib/color"
 import type { DepartmentConfig } from "@/lib/cms-types"
@@ -43,6 +50,8 @@ export function CmsDepartmentView({
   onUpdateIntegration,
   onUpdateTheme,
 }: CmsDepartmentViewProps) {
+  const waitingIndicatorMode =
+    department.theme.waitingIndicatorMode === "video" ? "video" : "text"
   const previewBackground = department.theme.backgroundImageUrl
     ? {
         backgroundImage: `linear-gradient(180deg, ${hexToRgba(
@@ -309,43 +318,98 @@ export function CmsDepartmentView({
               </FieldBlock>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
-              <FieldBlock label="Text chờ phản hồi" hint="Hiệu ứng typewriter khi chờ AI trả lời.">
-                <Input
-                  value={department.theme.waitingText ?? ""}
-                  onChange={(event) => onUpdateTheme("waitingText", event.target.value)}
-                  className={cmsInputClass}
-                  placeholder="Đang tìm câu trả lời phù hợp cho bạn"
-                />
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <FieldBlock
+                label="Hiển thị khi chờ"
+                hint="Chọn text typewriter hoặc video robot trong lúc AI đang trả lời."
+              >
+                <Select
+                  value={waitingIndicatorMode}
+                  onValueChange={(value) => onUpdateTheme("waitingIndicatorMode", value)}
+                >
+                  <SelectTrigger className={`${cmsInputClass} w-full`}>
+                    <SelectValue placeholder="Chọn kiểu hiển thị" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="text">Text typewriter</SelectItem>
+                    <SelectItem value="video">Video robot</SelectItem>
+                  </SelectContent>
+                </Select>
               </FieldBlock>
-              <FieldBlock label="Tốc độ gõ (ms)" hint="Khoảng cách giữa mỗi ký tự (20–200).">
-                <Input
-                  type="number"
-                  min={20}
-                  max={200}
-                  value={department.theme.waitingTextSpeed ?? 60}
-                  onChange={(event) =>
-                    onUpdateTheme("waitingTextSpeed", event.target.value)
-                  }
-                  className={cmsInputClass}
-                />
-              </FieldBlock>
-              <FieldBlock label="Màu con trỏ gõ">
-                <div className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-2.5">
-                  <input
-                    type="color"
-                    value={department.theme.waitingCursorColor || department.theme.accent}
-                    onChange={(event) => onUpdateTheme("waitingCursorColor", event.target.value)}
-                    className="h-9 w-10 rounded-lg border-0 bg-transparent"
-                  />
-                  <Input
-                    value={department.theme.waitingCursorColor ?? ""}
-                    onChange={(event) => onUpdateTheme("waitingCursorColor", event.target.value)}
-                    className="h-9 rounded-xl border-0 bg-white shadow-none"
-                    placeholder={department.theme.accent}
-                  />
-                </div>
-              </FieldBlock>
+
+              {waitingIndicatorMode === "text" ? (
+                <>
+                  <FieldBlock
+                    label="Text chờ phản hồi"
+                    hint="Hiệu ứng typewriter khi chờ AI trả lời."
+                  >
+                    <Input
+                      value={department.theme.waitingText ?? ""}
+                      onChange={(event) => onUpdateTheme("waitingText", event.target.value)}
+                      className={cmsInputClass}
+                      placeholder="Đang tìm câu trả lời phù hợp cho bạn"
+                    />
+                  </FieldBlock>
+                  <FieldBlock
+                    label="Tốc độ gõ (ms)"
+                    hint="Khoảng cách giữa mỗi ký tự (20–200)."
+                  >
+                    <Input
+                      type="number"
+                      min={20}
+                      max={200}
+                      value={department.theme.waitingTextSpeed ?? 60}
+                      onChange={(event) =>
+                        onUpdateTheme("waitingTextSpeed", event.target.value)
+                      }
+                      className={cmsInputClass}
+                    />
+                  </FieldBlock>
+                  <FieldBlock label="Màu con trỏ gõ">
+                    <div className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-2.5">
+                      <input
+                        type="color"
+                        value={department.theme.waitingCursorColor || department.theme.accent}
+                        onChange={(event) =>
+                          onUpdateTheme("waitingCursorColor", event.target.value)
+                        }
+                        className="h-9 w-10 rounded-lg border-0 bg-transparent"
+                      />
+                      <Input
+                        value={department.theme.waitingCursorColor ?? ""}
+                        onChange={(event) =>
+                          onUpdateTheme("waitingCursorColor", event.target.value)
+                        }
+                        className="h-9 rounded-xl border-0 bg-white shadow-none"
+                        placeholder={department.theme.accent}
+                      />
+                    </div>
+                  </FieldBlock>
+                </>
+              ) : (
+                <FieldBlock
+                  label="Video chờ phản hồi"
+                  hint="Sử dụng file /Robot-dao-boi.webm từ thư mục public."
+                  className="xl:col-span-3"
+                >
+                  <div className={`${cmsInsetClass} flex items-center gap-4 px-3 py-3`}>
+                    <video
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      preload="auto"
+                      className="h-20 w-20 rounded-2xl bg-white object-contain"
+                    >
+                      <source src="/Robot-dao-boi.webm" type="video/webm" />
+                    </video>
+                    <p className="text-sm leading-6 text-slate-600">
+                      Chat sẽ hiển thị video robot thay cho hiệu ứng gõ chữ khi AI đang tạo câu
+                      trả lời.
+                    </p>
+                  </div>
+                </FieldBlock>
+              )}
             </div>
           </SectionCard>
         </div>
@@ -388,6 +452,22 @@ export function CmsDepartmentView({
                       style={{ backgroundColor: department.theme.assistantBubble }}
                     >
                       {department.welcomeMessage || "Lời chào chatbot sẽ hiển thị tại đây."}
+                    </div>
+                    <div className="max-w-[88%] rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+                      {waitingIndicatorMode === "video" ? (
+                        <video
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                          preload="auto"
+                          className="h-20 w-20 rounded-2xl object-contain"
+                        >
+                          <source src="/Robot-dao-boi.webm" type="video/webm" />
+                        </video>
+                      ) : (
+                        <span>{department.theme.waitingText || "Đang tìm câu trả lời phù hợp cho bạn"}</span>
+                      )}
                     </div>
                   </div>
                 </div>

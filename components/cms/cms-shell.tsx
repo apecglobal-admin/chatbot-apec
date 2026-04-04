@@ -103,6 +103,7 @@ export function CmsShell({ initialConfig }: CmsShellProps) {
       "backgroundImageUrl",
       "botAvatarUrl",
       "headerLogoUrl",
+      "waitingIndicatorMode",
       "waitingText",
       "waitingTextSpeed",
       "waitingCursorColor",

@@ -6,6 +6,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin"
 import type { CmsConfig, DepartmentConfig } from "@/lib/cms-types"
 
 const COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/
+const WAITING_INDICATOR_MODES = ["text", "video"] as const
 
 const departmentThemeSchema = z.object({
   accent: z.string().regex(COLOR_REGEX),
@@ -18,6 +19,7 @@ const departmentThemeSchema = z.object({
   backgroundImageUrl: z.string().optional(),
   botAvatarUrl: z.string().optional(),
   headerLogoUrl: z.string().optional(),
+  waitingIndicatorMode: z.enum(WAITING_INDICATOR_MODES).optional(),
   waitingText: z.string().optional(),
   waitingTextSpeed: z.coerce.number().int().min(20).max(200).optional(),
   waitingCursorColor: z.string().optional(),
@@ -127,6 +129,7 @@ export const DEFAULT_CONFIG: CmsConfig = {
         userBubble: "#2F855A",
         assistantBubble: "#E8F4EC",
         badge: "#163E2D",
+        waitingIndicatorMode: "text",
       },
       integration: {
         endpoint: "https://rag-ai-jn9g.onrender.com/api/external/chat-stream",
@@ -159,6 +162,7 @@ export const DEFAULT_CONFIG: CmsConfig = {
         userBubble: "#D97706",
         assistantBubble: "#FFF0DB",
         badge: "#7C2D12",
+        waitingIndicatorMode: "text",
       },
       integration: {
         endpoint: "https://rag-ai-jn9g.onrender.com/api/external/chat-stream",
@@ -191,6 +195,7 @@ export const DEFAULT_CONFIG: CmsConfig = {
         userBubble: "#0F766E",
         assistantBubble: "#E1F6F3",
         badge: "#134E4A",
+        waitingIndicatorMode: "text",
       },
       integration: {
         endpoint: "https://rag-ai-jn9g.onrender.com/api/external/chat-stream",
@@ -223,6 +228,7 @@ export const DEFAULT_CONFIG: CmsConfig = {
         userBubble: "#BE185D",
         assistantBubble: "#FFE3EF",
         badge: "#831843",
+        waitingIndicatorMode: "text",
       },
       integration: {
         endpoint: "https://rag-ai-jn9g.onrender.com/api/external/chat-stream",
@@ -264,6 +270,7 @@ function mapDepartmentRow(row: DepartmentRow, includeSecrets: boolean): Departme
       backgroundImageUrl: row.theme.backgroundImageUrl || "",
       botAvatarUrl: row.theme.botAvatarUrl || "",
       headerLogoUrl: row.theme.headerLogoUrl || "",
+      waitingIndicatorMode: row.theme.waitingIndicatorMode === "video" ? "video" : "text",
       waitingText: row.theme.waitingText || "",
       waitingTextSpeed: Number(row.theme.waitingTextSpeed) || 60,
       waitingCursorColor: row.theme.waitingCursorColor || "",
@@ -312,6 +319,8 @@ function sanitizeConfig(
           backgroundImageUrl: department.theme.backgroundImageUrl?.trim() || "",
           botAvatarUrl: department.theme.botAvatarUrl?.trim() || "",
           headerLogoUrl: department.theme.headerLogoUrl?.trim() || "",
+          waitingIndicatorMode:
+            department.theme.waitingIndicatorMode === "video" ? "video" : "text",
           waitingText: department.theme.waitingText?.trim() || "",
           waitingTextSpeed: department.theme.waitingTextSpeed || 60,
           waitingCursorColor: department.theme.waitingCursorColor?.trim() || "",

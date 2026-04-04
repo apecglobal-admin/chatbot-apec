@@ -1,41 +1,41 @@
-"use client"
+"use client";
 
-import type { KeyboardEvent, RefObject } from "react"
-import { Send, Volume2, VolumeX, Waves } from "lucide-react"
+import type { KeyboardEvent, RefObject } from "react";
+import { Send, VolumeX } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import type { DepartmentTheme } from "@/lib/cms-types"
-import { hexToRgba } from "@/lib/color"
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import type { DepartmentTheme } from "@/lib/cms-types";
+import { hexToRgba } from "@/lib/color";
 
-import type { ChatThreadMessage } from "../types"
-import { ChatMessage } from "./chat-message"
-import { FakeStreamingText } from "./fake-streaming-text"
-import { VoiceButton } from "./voice-button"
+import type { ChatThreadMessage } from "../types";
+import { ChatMessage } from "./chat-message";
+import { FakeStreamingText } from "./fake-streaming-text";
+import { VoiceButton } from "./voice-button";
 
 interface ChatConversationProps {
-  apiConfigured: boolean
-  departmentDescription: string
-  departmentName: string
-  errorMessage: string
-  inputValue: string
-  isListening: boolean
-  isSpeaking: boolean
-  isSubmitting: boolean
-  isTranscribing: boolean
-  messages: ChatThreadMessage[]
-  onInputChange: (value: string) => void
-  onInputKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void
-  onPromptSelect: (prompt: string) => void
-  onStopSpeaking: () => void
-  onSubmit: () => void
-  onVoicePressStart: () => void
-  onVoicePressEnd: () => void
-  placeholder: string
-  recognitionSupported: boolean
-  scrollRef: RefObject<HTMLDivElement | null>
-  suggestedPrompts: string[]
-  theme: DepartmentTheme
+  apiConfigured: boolean;
+  departmentDescription: string;
+  departmentName: string;
+  errorMessage: string;
+  inputValue: string;
+  isListening: boolean;
+  isSpeaking: boolean;
+  isSubmitting: boolean;
+  isTranscribing: boolean;
+  messages: ChatThreadMessage[];
+  onInputChange: (value: string) => void;
+  onInputKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
+  onPromptSelect: (prompt: string) => void;
+  onStopSpeaking: () => void;
+  onSubmit: () => void;
+  onVoicePressStart: () => void;
+  onVoicePressEnd: () => void;
+  placeholder: string;
+  recognitionSupported: boolean;
+  scrollRef: RefObject<HTMLDivElement | null>;
+  suggestedPrompts: string[];
+  theme: DepartmentTheme;
 }
 
 export function ChatConversation({
@@ -62,13 +62,21 @@ export function ChatConversation({
   suggestedPrompts,
   theme,
 }: ChatConversationProps) {
-  const disabled = !apiConfigured || isSubmitting
-  const hasMessages = messages.length > 1 // more than just welcome
+  const disabled = !apiConfigured || isSubmitting;
+  const shouldShowWaitingState =
+    isSubmitting &&
+    !(
+      messages.length > 0 &&
+      messages[messages.length - 1].role === "assistant" &&
+      messages[messages.length - 1].content.length > 0
+    );
+  const waitingIndicatorMode =
+    theme.waitingIndicatorMode === "video" ? "video" : "text";
 
   return (
     <section className="relative flex h-full flex-1 flex-col overflow-hidden rounded-[32px] border border-white/70 bg-white/84 shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
       {/* Header */}
-      <div 
+      <div
         className="px-6 py-4 md:px-8"
         style={{ backgroundColor: theme.accent }}
       >
@@ -76,9 +84,7 @@ export function ChatConversation({
           {departmentName}
         </h2>
         {departmentDescription ? (
-          <p className="mt-1 text-sm text-white/90">
-            {departmentDescription}
-          </p>
+          <p className="mt-1 text-sm text-white/90">{departmentDescription}</p>
         ) : null}
       </div>
 
@@ -97,16 +103,33 @@ export function ChatConversation({
           />
         ))}
 
-        {isSubmitting && !(messages.length > 0 && messages[messages.length - 1].role === "assistant" && messages[messages.length - 1].content.length > 0) ? (
-          <div className="mr-auto flex max-w-[90%] items-center gap-3 rounded-[24px] border bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
-            <FakeStreamingText
-              text={theme.waitingText || "Đang tìm câu trả lời phù hợp cho bạn"}
-              speed={theme.waitingTextSpeed || 60}
-              cursorColor={theme.waitingCursorColor || theme.accent}
-            />
-          </div>
+        {shouldShowWaitingState ? (
+          waitingIndicatorMode === "video" ? (
+              <video
+                autoPlay
+                loop
+                muted
+                playsInline
+                preload="auto"
+                aria-label="AI is preparing a response"
+                className="h-28 w-28 ml-4 rounded-[18px] object-contain"
+              >
+                <source src="/Robot-dao-boi.webm" type="video/webm" />
+              </video>
+          ) : (
+            <div className="mr-auto max-w-[90%] rounded-[24px] border bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
+              <div className="flex items-center gap-3">
+                <FakeStreamingText
+                  text={
+                    theme.waitingText || "Đang tìm câu trả lời phù hợp cho bạn"
+                  }
+                  speed={theme.waitingTextSpeed || 60}
+                  cursorColor={theme.waitingCursorColor || theme.accent}
+                />
+              </div>
+            </div>
+          )
         ) : null}
-
 
         {errorMessage ? (
           <div className="rounded-[24px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
@@ -194,12 +217,13 @@ export function ChatConversation({
 
           {!apiConfigured ? (
             <p className="text-center text-sm text-amber-700">
-              {"API của ngành hàng này chưa được cấu hình nên chatbot đang bị khóa gửi tin."}
+              {
+                "API của ngành hàng này chưa được cấu hình nên chatbot đang bị khóa gửi tin."
+              }
             </p>
           ) : null}
         </div>
       </div>
     </section>
-  )
+  );
 }
-
