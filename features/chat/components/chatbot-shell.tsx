@@ -27,6 +27,8 @@ export function ChatbotShell({
   } = useChatConversation({
     department,
     apiConfigured,
+    onAssistantChunk: (chunk) => appendTTSChunkRef.current?.(chunk),
+    onAssistantMessage: () => flushTTSRef.current?.(),
   })
 
   const {
@@ -35,6 +37,8 @@ export function ChatbotShell({
     isTranscribing,
     recognitionSupported,
     speak,
+    appendTTSChunk,
+    flushTTS,
     startListening,
     stopListening,
     stopSpeaking,
@@ -47,6 +51,15 @@ export function ChatbotShell({
     currentTranscript: inputValue,
   })
 
+  // Use refs to avoid dependency cycles in useChatConversation setup
+  const appendTTSChunkRef = useRef(appendTTSChunk)
+  const flushTTSRef = useRef(flushTTS)
+
+  useEffect(() => {
+    appendTTSChunkRef.current = appendTTSChunk
+    flushTTSRef.current = flushTTS
+  }, [appendTTSChunk, flushTTS])
+
   useEffect(() => {
     const container = scrollRef.current
 
@@ -58,14 +71,6 @@ export function ChatbotShell({
   useEffect(() => {
     setInputValue("")
   }, [department.slug])
-
-  useEffect(() => {
-    const latestMessage = messages.at(-1)
-
-    if (latestMessage?.role === "assistant" && latestMessage.id !== "welcome") {
-      speak(latestMessage.content)
-    }
-  }, [messages, speak])
 
   const handleClearConversation = useCallback(() => {
     setInputValue("")

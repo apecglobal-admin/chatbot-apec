@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
+import { TTSStreamer } from "../utils/tts-streamer"
 
 interface UseVoiceAssistantOptions {
   onTranscriptChange: (text: string) => void
@@ -23,6 +24,7 @@ export function useVoiceAssistant({
   const audioChunksRef = useRef<Blob[]>([])
   const streamRef = useRef<MediaStream | null>(null)
   const currentTranscriptRef = useRef(currentTranscript)
+  const streamerRef = useRef<TTSStreamer | null>(null)
 
   // Track whether to auto-submit when recording finishes
   const shouldSubmitRef = useRef(false)
@@ -50,8 +52,19 @@ export function useVoiceAssistant({
       if (vadRef.current) {
         void vadRef.current.destroy()
       }
+      streamerRef.current?.stop()
     }
   }, [])
+
+  useEffect(() => {
+    streamerRef.current = new TTSStreamer({
+      playbackRate,
+      onSpeakingStateChange: setIsSpeaking,
+    })
+    return () => {
+      streamerRef.current?.stop()
+    }
+  }, [playbackRate])
 
   const sendToGroq = useCallback(
     async (audioBlob: Blob, submit: boolean) => {
@@ -230,6 +243,7 @@ export function useVoiceAssistant({
       audioRef.current.pause()
       audioRef.current.currentTime = 0
     }
+    streamerRef.current?.stop()
     setIsSpeaking(false)
   }, [])
 
@@ -314,6 +328,14 @@ export function useVoiceAssistant({
     [stopSpeaking, playbackRate],
   )
 
+  const appendTTSChunk = useCallback((text: string) => {
+    streamerRef.current?.appendTextTokens(text)
+  }, [])
+
+  const flushTTS = useCallback(() => {
+    streamerRef.current?.finish()
+  }, [])
+
   return {
     isListening,
     isSpeaking,
@@ -322,6 +344,8 @@ export function useVoiceAssistant({
     recognitionSupported: true, // Groq API always available server-side
     setPlaybackRate,
     speak,
+    appendTTSChunk,
+    flushTTS,
     startListening,
     stopListening,
     stopSpeaking,

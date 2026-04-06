@@ -1,41 +1,71 @@
-"use client"
+"use client";
 
-import type { DepartmentTheme } from "@/lib/cms-types"
-import { hexToRgba } from "@/lib/color"
-import { cn } from "@/lib/utils"
+import type { DepartmentTheme } from "@/lib/cms-types";
+import { hexToRgba } from "@/lib/color";
+import { cn } from "@/lib/utils";
+import { useEffect, useRef, useState } from "react";
 
-import { BotAvatar } from "./bot-avatar"
+import { BotAvatar } from "./bot-avatar";
+
+function useTypewriter(content: string, enabled: boolean) {
+  const [displayed, setDisplayed] = useState(() => content);
+  const contentRef = useRef(content);
+  const indexRef = useRef(content.length);
+
+  useEffect(() => {
+    contentRef.current = content;
+  }, [content]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const timer = setInterval(() => {
+      const target = contentRef.current;
+      if (indexRef.current < target.length) {
+        const diff = target.length - indexRef.current;
+        const charsToAdd = Math.max(1, Math.floor(diff * 0.25));
+        indexRef.current += charsToAdd;
+        setDisplayed(target.substring(0, indexRef.current));
+      }
+    }, 15); // 60fps catch up
+    return () => clearInterval(timer);
+  }, [enabled]);
+
+  return enabled ? displayed : content;
+}
 
 // Regex to match URLs that point to images (by extension or known image hosts)
 const IMAGE_URL_REGEX =
-  /https?:\/\/[^\s"'<>]+\.(?:png|jpe?g|gif|webp|svg|bmp|ico|avif)(?:\?[^\s"'<>]*)?/gi
+  /https?:\/\/[^\s"'<>]+\.(?:png|jpe?g|gif|webp|svg|bmp|ico|avif)(?:\?[^\s"'<>]*)?/gi;
 
 function MessageContent({ content }: { content: string }) {
-  const parts: { type: "text" | "image"; value: string }[] = []
-  let lastIndex = 0
+  const parts: { type: "text" | "image"; value: string }[] = [];
+  let lastIndex = 0;
 
   // Reset regex state
-  IMAGE_URL_REGEX.lastIndex = 0
-  let match = IMAGE_URL_REGEX.exec(content)
+  IMAGE_URL_REGEX.lastIndex = 0;
+  let match = IMAGE_URL_REGEX.exec(content);
 
   while (match) {
     // Text before this image URL
     if (match.index > lastIndex) {
-      parts.push({ type: "text", value: content.slice(lastIndex, match.index) })
+      parts.push({
+        type: "text",
+        value: content.slice(lastIndex, match.index),
+      });
     }
-    parts.push({ type: "image", value: match[0] })
-    lastIndex = match.index + match[0].length
-    match = IMAGE_URL_REGEX.exec(content)
+    parts.push({ type: "image", value: match[0] });
+    lastIndex = match.index + match[0].length;
+    match = IMAGE_URL_REGEX.exec(content);
   }
 
   // Remaining text after last match
   if (lastIndex < content.length) {
-    parts.push({ type: "text", value: content.slice(lastIndex) })
+    parts.push({ type: "text", value: content.slice(lastIndex) });
   }
 
   // No images found – render as plain text
   if (parts.every((p) => p.type === "text")) {
-    return <p className="whitespace-pre-wrap text-sm leading-6">{content}</p>
+    return <p className="whitespace-pre-wrap text-sm leading-6">{content}</p>;
   }
 
   return (
@@ -64,14 +94,14 @@ function MessageContent({ content }: { content: string }) {
         ),
       )}
     </div>
-  )
+  );
 }
 
 interface ChatMessageProps {
-  role: "user" | "assistant"
-  content: string
-  timestamp?: string
-  theme: DepartmentTheme
+  role: "user" | "assistant";
+  content: string;
+  timestamp?: string;
+  theme: DepartmentTheme;
 }
 
 export function ChatMessage({
@@ -80,7 +110,11 @@ export function ChatMessage({
   timestamp,
   theme,
 }: ChatMessageProps) {
-  const isUser = role === "user"
+  const isUser = role === "user";
+
+  // Only animate if it's an assistant message and it started as empty (a new streaming message)
+  const [shouldAnimate] = useState(() => !isUser && content === "");
+  const displayedContent = useTypewriter(content, shouldAnimate);
 
   return (
     <div
@@ -108,7 +142,7 @@ export function ChatMessage({
               : hexToRgba(theme.accent, 0.14),
           }}
         >
-          <MessageContent content={content} />
+          <MessageContent content={displayedContent} />
         </div>
         {timestamp ? (
           <span
@@ -122,5 +156,5 @@ export function ChatMessage({
         ) : null}
       </div>
     </div>
-  )
+  );
 }

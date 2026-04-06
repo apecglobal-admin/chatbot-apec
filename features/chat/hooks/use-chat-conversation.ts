@@ -11,6 +11,7 @@ interface UseChatConversationOptions {
   department: DepartmentConfig
   apiConfigured: boolean
   onAssistantMessage?: (text: string) => void
+  onAssistantChunk?: (chunk: string) => void
 }
 
 const generateId = () => {
@@ -25,6 +26,7 @@ export function useChatConversation({
   department,
   apiConfigured,
   onAssistantMessage,
+  onAssistantChunk,
 }: UseChatConversationOptions) {
   const [messages, setMessages] = useState<ChatThreadMessage[]>(() => [
     createWelcomeMessage(department.welcomeMessage),
@@ -163,6 +165,9 @@ export function useChatConversation({
               if (data.chunk) {
                 fullContent += data.chunk
 
+                // Stream audio chunk piece immediately
+                onAssistantChunk?.(data.chunk)
+
                 // Update the assistant message in-place
                 setMessages((current) =>
                   current.map((msg) =>
@@ -208,6 +213,8 @@ export function useChatConversation({
 
             if (data.chunk) {
               fullContent += data.chunk
+              onAssistantChunk?.(data.chunk)
+              
               setMessages((current) =>
                 current.map((msg) =>
                   msg.id === assistantMessageId
