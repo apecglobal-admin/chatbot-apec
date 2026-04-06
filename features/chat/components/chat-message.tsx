@@ -6,6 +6,67 @@ import { cn } from "@/lib/utils"
 
 import { BotAvatar } from "./bot-avatar"
 
+// Regex to match URLs that point to images (by extension or known image hosts)
+const IMAGE_URL_REGEX =
+  /https?:\/\/[^\s"'<>]+\.(?:png|jpe?g|gif|webp|svg|bmp|ico|avif)(?:\?[^\s"'<>]*)?/gi
+
+function MessageContent({ content }: { content: string }) {
+  const parts: { type: "text" | "image"; value: string }[] = []
+  let lastIndex = 0
+
+  // Reset regex state
+  IMAGE_URL_REGEX.lastIndex = 0
+  let match = IMAGE_URL_REGEX.exec(content)
+
+  while (match) {
+    // Text before this image URL
+    if (match.index > lastIndex) {
+      parts.push({ type: "text", value: content.slice(lastIndex, match.index) })
+    }
+    parts.push({ type: "image", value: match[0] })
+    lastIndex = match.index + match[0].length
+    match = IMAGE_URL_REGEX.exec(content)
+  }
+
+  // Remaining text after last match
+  if (lastIndex < content.length) {
+    parts.push({ type: "text", value: content.slice(lastIndex) })
+  }
+
+  // No images found – render as plain text
+  if (parts.every((p) => p.type === "text")) {
+    return <p className="whitespace-pre-wrap text-sm leading-6">{content}</p>
+  }
+
+  return (
+    <div className="space-y-2 text-sm leading-6">
+      {parts.map((part, index) =>
+        part.type === "image" ? (
+          <a
+            key={index}
+            href={part.value}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block overflow-hidden rounded-xl"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={part.value}
+              alt="Ảnh trong tin nhắn"
+              className="max-h-[300px] w-auto rounded-xl object-contain transition hover:scale-[1.02]"
+              loading="lazy"
+            />
+          </a>
+        ) : (
+          <p key={index} className="whitespace-pre-wrap">
+            {part.value}
+          </p>
+        ),
+      )}
+    </div>
+  )
+}
+
 interface ChatMessageProps {
   role: "user" | "assistant"
   content: string
@@ -47,7 +108,7 @@ export function ChatMessage({
               : hexToRgba(theme.accent, 0.14),
           }}
         >
-          <p className="whitespace-pre-wrap text-sm leading-6">{content}</p>
+          <MessageContent content={content} />
         </div>
         {timestamp ? (
           <span
