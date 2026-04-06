@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import type { KeyboardEvent, RefObject } from "react"
 import { Send, VolumeX } from "lucide-react"
@@ -9,9 +9,11 @@ import type { DepartmentTheme } from "@/lib/cms-types"
 import { hexToRgba } from "@/lib/color"
 
 import type { ChatThreadMessage } from "../types"
+import { BotAvatar } from "./bot-avatar"
 import { ChatMessage } from "./chat-message"
 import { FakeStreamingText } from "./fake-streaming-text"
 import { VoiceButton } from "./voice-button"
+import { WaitingVideo } from "./waiting-video"
 
 interface ChatConversationProps {
   apiConfigured: boolean
@@ -94,31 +96,27 @@ export function ChatConversation({
         ))}
 
         {shouldShowWaitingState ? (
-          waitingIndicatorMode === "video" ? (
-            <div className="mr-auto rounded-[24px] border bg-white px-3 py-3 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
-              <video
-                autoPlay
-                loop
-                muted
-                playsInline
-                preload="auto"
-                aria-label="AI is preparing a response"
-                className="h-28 w-28 rounded-[18px] object-contain"
-              >
-                <source src={waitingVideoUrl} />
-              </video>
+          <div className="mr-auto flex max-w-[90%] gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <BotAvatar theme={theme} />
+            <div className="flex flex-col gap-1.5">
+              {waitingIndicatorMode === "video" ? (
+                <WaitingVideo url={waitingVideoUrl} />
+              ) : (
+                <div
+                  className="rounded-[24px] rounded-bl-md border bg-white/92 px-4 py-3.5 text-sm leading-6 text-slate-900 shadow-[0_12px_32px_rgba(15,23,42,0.06)]"
+                  style={{
+                    borderColor: hexToRgba(theme.accent, 0.14),
+                  }}
+                >
+                  <FakeStreamingText
+                    text={theme.waitingText || "Đang tìm câu trả lời phù hợp cho bạn"}
+                    speed={theme.waitingTextSpeed || 60}
+                    cursorColor={theme.waitingCursorColor || theme.accent}
+                  />
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="mr-auto max-w-[90%] rounded-[24px] border bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
-              <div className="flex items-center gap-3">
-                <FakeStreamingText
-                  text={theme.waitingText || "Đang tìm câu trả lời phù hợp cho bạn"}
-                  speed={theme.waitingTextSpeed || 60}
-                  cursorColor={theme.waitingCursorColor || theme.accent}
-                />
-              </div>
-            </div>
-          )
+          </div>
         ) : null}
 
         {errorMessage ? (

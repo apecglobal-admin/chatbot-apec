@@ -4,6 +4,8 @@ import type { DepartmentTheme } from "@/lib/cms-types"
 import { hexToRgba } from "@/lib/color"
 import { cn } from "@/lib/utils"
 
+import { BotAvatar } from "./bot-avatar"
+
 interface ChatMessageProps {
   role: "user" | "assistant"
   content: string
@@ -26,26 +28,7 @@ export function ChatMessage({
         isUser ? "ml-auto flex-row-reverse" : "mr-auto",
       )}
     >
-      {!isUser ? (
-        <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/70 bg-white text-xs font-bold text-slate-700 shadow-[0_10px_30px_rgba(15,23,42,0.08)]"
-          style={{
-            backgroundImage: theme.botAvatarUrl
-              ? "none"
-              : `linear-gradient(135deg, ${hexToRgba(theme.accent, 0.18)}, rgba(255,255,255,0.92))`,
-          }}
-        >
-          {theme.botAvatarUrl ? (
-            <img
-              src={theme.botAvatarUrl}
-              alt="AI"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            "AI"
-          )}
-        </div>
-      ) : null}
+      {!isUser ? <BotAvatar theme={theme} /> : null}
 
       <div className="flex flex-col gap-1.5">
         <div
