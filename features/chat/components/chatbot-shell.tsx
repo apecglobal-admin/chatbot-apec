@@ -15,6 +15,7 @@ export function ChatbotShell({
   apiConfigured,
 }: ChatbotShellProps) {
   const [inputValue, setInputValue] = useState("")
+  const [ttsEnabled, setTtsEnabled] = useState(true)
   const scrollRef = useRef<HTMLDivElement>(null)
   const [autoClearTarget, setAutoClearTarget] = useState<number | null>(null)
 
@@ -27,6 +28,8 @@ export function ChatbotShell({
   } = useChatConversation({
     department,
     apiConfigured,
+    onAssistantChunk: (chunk) => { if (ttsEnabledRef.current) appendTTSChunkRef.current?.(chunk) },
+    onAssistantMessage: () => { if (ttsEnabledRef.current) flushTTSRef.current?.() },
   })
 
   const {
@@ -35,6 +38,8 @@ export function ChatbotShell({
     isTranscribing,
     recognitionSupported,
     speak,
+    appendTTSChunk,
+    flushTTS,
     startListening,
     stopListening,
     stopSpeaking,
@@ -46,6 +51,20 @@ export function ChatbotShell({
     },
     currentTranscript: inputValue,
   })
+
+  // Use refs to avoid dependency cycles in useChatConversation setup
+  const appendTTSChunkRef = useRef(appendTTSChunk)
+  const flushTTSRef = useRef(flushTTS)
+  const ttsEnabledRef = useRef(ttsEnabled)
+
+  useEffect(() => {
+    appendTTSChunkRef.current = appendTTSChunk
+    flushTTSRef.current = flushTTS
+  }, [appendTTSChunk, flushTTS])
+
+  useEffect(() => {
+    ttsEnabledRef.current = ttsEnabled
+  }, [ttsEnabled])
 
   useEffect(() => {
     const container = scrollRef.current
@@ -59,16 +78,9 @@ export function ChatbotShell({
     setInputValue("")
   }, [department.slug])
 
-  useEffect(() => {
-    const latestMessage = messages.at(-1)
-
-    if (latestMessage?.role === "assistant" && latestMessage.id !== "welcome") {
-      speak(latestMessage.content)
-    }
-  }, [messages, speak])
-
   const handleClearConversation = useCallback(() => {
     setInputValue("")
+    setTtsEnabled(true)
     clearConversation()
   }, [clearConversation])
 
@@ -168,6 +180,11 @@ export function ChatbotShell({
           scrollRef={scrollRef}
           suggestedPrompts={department.suggestedPrompts}
           theme={department.theme}
+          ttsEnabled={ttsEnabled}
+          onTtsEnabledChange={(enabled) => {
+            setTtsEnabled(enabled)
+            if (!enabled) stopSpeaking()
+          }}
         />
       </div>
     </main>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { KeyboardEvent, RefObject } from "react";
-import { RotateCcw, Send, VolumeX } from "lucide-react";
+import { RotateCcw, Send, Volume2, VolumeX } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -108,11 +108,13 @@ interface ChatConversationProps {
   onClearConversation: () => void;
   onVoicePressStart: () => void;
   onVoicePressEnd: () => void;
+  onTtsEnabledChange: (enabled: boolean) => void;
   placeholder: string;
   recognitionSupported: boolean;
   scrollRef: RefObject<HTMLDivElement | null>;
   suggestedPrompts: string[];
   theme: DepartmentTheme;
+  ttsEnabled: boolean;
 }
 
 export function ChatConversation({
@@ -135,11 +137,13 @@ export function ChatConversation({
   onClearConversation,
   onVoicePressStart,
   onVoicePressEnd,
+  onTtsEnabledChange,
   placeholder,
   recognitionSupported,
   scrollRef,
   suggestedPrompts,
   theme,
+  ttsEnabled,
 }: ChatConversationProps) {
   const disabled = !apiConfigured || isSubmitting;
   const shouldShowWaitingState =
@@ -279,30 +283,56 @@ export function ChatConversation({
           </Button>
         </div>
 
-        <div className="relative z-50 mt-4 flex flex-col items-center gap-2">
-          <VoiceButton
-            accent={theme.accent}
-            disabled={disabled || !recognitionSupported}
-            isListening={isListening}
-            isTranscribing={isTranscribing}
-            onPressStart={onVoicePressStart}
-            onPressEnd={onVoicePressEnd}
-          />
+        <div className="relative z-50 mt-4 flex w-full flex-col items-center">
+          <div className="relative flex min-h-[64px] w-full items-center justify-center">
+            <div className="absolute left-5 flex flex-col items-start gap-5">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onStopSpeaking}
+                className={[
+                  "rounded-full border-rose-200 bg-white/70 shadow-lg text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-all",
+                  isSpeaking ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
+                ].join(" ")}
+              >
+                <VolumeX className="mr-2 h-4 w-4" />
+                {"Dừng đọc"}
+              </Button>
 
-          {isSpeaking ? (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onStopSpeaking}
-              className="mt-1 rounded-full border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-            >
-              <VolumeX className="mr-2 h-4 w-4" />
-              {"Dừng đọc"}
-            </Button>
-          ) : null}
+              <button
+                type="button"
+                title={ttsEnabled ? "Tắt đọc tự động" : "Bật đọc tự động"}
+                onClick={() => onTtsEnabledChange(!ttsEnabled)}
+                className={[
+                  "flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-medium transition-all hover:scale-105 active:scale-95",
+                  ttsEnabled
+                    ? "border-emerald-200 bg-emerald-50/70 text-emerald-700 hover:bg-emerald-100 shadow-lg"
+                    : "border-slate-200 bg-white/70 text-slate-500 hover:bg-slate-100 shadow-lg",
+                ].join(" ")}
+              >
+                {ttsEnabled ? (
+                  <Volume2 className="h-4 w-4" />
+                ) : (
+                  <VolumeX className="h-4 w-4" />
+                )}
+                <span className="hidden sm:inline">
+                  {ttsEnabled ? "Đang bật tự đọc" : "Đã tắt tự đọc"}
+                </span>
+              </button>
+            </div>
+
+            <VoiceButton
+              accent={theme.accent}
+              disabled={disabled || !recognitionSupported}
+              isListening={isListening}
+              isTranscribing={isTranscribing}
+              onPressStart={onVoicePressStart}
+              onPressEnd={onVoicePressEnd}
+            />
+          </div>
 
           {!apiConfigured ? (
-            <p className="text-center text-sm text-amber-700">
+            <p className="mt-2 text-center text-sm text-amber-700">
               {
                 "API của ngành hàng này chưa được cấu hình nên chatbot đang bị khóa gửi tin."
               }
