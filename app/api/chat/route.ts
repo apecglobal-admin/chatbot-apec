@@ -11,6 +11,7 @@ const requestSchema = z.object({
   departmentSlug: z.string().min(1),
   message: z.string().min(1).max(4000),
   userId: z.string().min(1),
+  conversationId: z.string().nullish(),
 })
 
 export async function POST(request: Request) {
@@ -47,12 +48,16 @@ export async function POST(request: Request) {
     )
 
     try {
-      const upstreamBody = {
+      const upstreamBody: Record<string, unknown> = {
         message: parsed.data.message,
         user_id: `${department.integration.partnerUserPrefix}-${parsed.data.userId}`,
         metadata: {
           assistant: department.integration.assistantSlug,
         },
+      }
+
+      if (parsed.data.conversationId) {
+        upstreamBody.conversation_id = parsed.data.conversationId
       }
 
       const upstream = await fetch(department.integration.endpoint, {

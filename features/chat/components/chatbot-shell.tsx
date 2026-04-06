@@ -16,8 +16,10 @@ export function ChatbotShell({
 }: ChatbotShellProps) {
   const [inputValue, setInputValue] = useState("")
   const scrollRef = useRef<HTMLDivElement>(null)
+  const [autoClearTarget, setAutoClearTarget] = useState<number | null>(null)
 
   const {
+    clearConversation,
     errorMessage,
     isSubmitting,
     messages,
@@ -65,6 +67,29 @@ export function ChatbotShell({
     }
   }, [messages, speak])
 
+  const handleClearConversation = useCallback(() => {
+    setInputValue("")
+    clearConversation()
+  }, [clearConversation])
+
+  const inactivityTimeoutMinutes = department.theme.inactivityTimeoutMinutes ?? 5
+
+  useEffect(() => {
+    if (messages.length <= 1) {
+      setAutoClearTarget(null)
+      return
+    }
+
+    const duration = inactivityTimeoutMinutes * 60 * 1000
+    setAutoClearTarget(Date.now() + duration)
+
+    const timeoutId = setTimeout(() => {
+      handleClearConversation()
+    }, duration)
+
+    return () => clearTimeout(timeoutId)
+  }, [messages, inputValue, isListening, handleClearConversation, inactivityTimeoutMinutes])
+
   const handleSubmit = useCallback(
     (value: string) => {
       const nextValue = value.trim()
@@ -105,6 +130,7 @@ export function ChatbotShell({
       <div className="relative mx-auto flex min-h-0 w-full flex-1 flex-col gap-5">
         <ChatConversation
           apiConfigured={apiConfigured}
+          autoClearTarget={autoClearTarget}
           departmentDescription={department.description}
           departmentName={department.name}
           errorMessage={errorMessage}
@@ -126,6 +152,7 @@ export function ChatbotShell({
           onSubmit={() => {
             handleSubmit(inputValue)
           }}
+          onClearConversation={handleClearConversation}
           onVoicePressStart={() => {
             if (recognitionSupported) {
               startListening()

@@ -24,6 +24,7 @@ const departmentThemeSchema = z.object({
   waitingText: z.string().optional(),
   waitingTextSpeed: z.coerce.number().int().min(20).max(200).optional(),
   waitingCursorColor: z.string().optional(),
+  inactivityTimeoutMinutes: z.coerce.number().int().min(1).max(60).optional(),
 })
 
 const departmentIntegrationSchema = z.object({
@@ -280,6 +281,7 @@ function mapDepartmentRow(row: DepartmentRow, includeSecrets: boolean): Departme
       waitingText: row.theme.waitingText || "",
       waitingTextSpeed: Number(row.theme.waitingTextSpeed) || 60,
       waitingCursorColor: row.theme.waitingCursorColor || "",
+      inactivityTimeoutMinutes: Number(row.theme.inactivityTimeoutMinutes) || 5,
     },
     integration: {
       endpoint: row.api_endpoint,
@@ -331,6 +333,7 @@ function sanitizeConfig(
           waitingText: department.theme.waitingText?.trim() || "",
           waitingTextSpeed: department.theme.waitingTextSpeed || 60,
           waitingCursorColor: department.theme.waitingCursorColor?.trim() || "",
+          inactivityTimeoutMinutes: department.theme.inactivityTimeoutMinutes || 5,
         },
         integration: {
           endpoint: department.integration.endpoint.trim(),

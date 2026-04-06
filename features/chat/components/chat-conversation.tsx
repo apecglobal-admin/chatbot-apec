@@ -1,47 +1,123 @@
-"use client"
+"use client";
 
-import type { KeyboardEvent, RefObject } from "react"
-import { Send, VolumeX } from "lucide-react"
+import { useEffect, useState } from "react";
+import type { KeyboardEvent, RefObject } from "react";
+import { RotateCcw, Send, VolumeX } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import type { DepartmentTheme } from "@/lib/cms-types"
-import { hexToRgba } from "@/lib/color"
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import type { DepartmentTheme } from "@/lib/cms-types";
+import { hexToRgba } from "@/lib/color";
 
-import type { ChatThreadMessage } from "../types"
-import { BotAvatar } from "./bot-avatar"
-import { ChatMessage } from "./chat-message"
-import { FakeStreamingText } from "./fake-streaming-text"
-import { VoiceButton } from "./voice-button"
-import { WaitingVideo } from "./waiting-video"
+import type { ChatThreadMessage } from "../types";
+import { BotAvatar } from "./bot-avatar";
+import { ChatMessage } from "./chat-message";
+import { FakeStreamingText } from "./fake-streaming-text";
+import { VoiceButton } from "./voice-button";
+import { WaitingVideo } from "./waiting-video";
+
+function ResetTimerBar({
+  targetTimestamp,
+  durationSeconds,
+  onClear,
+  theme,
+  forceShowButton,
+}: {
+  targetTimestamp: number | null;
+  durationSeconds: number;
+  onClear: () => void;
+  theme: DepartmentTheme;
+  forceShowButton: boolean;
+}) {
+  const [timeLeft, setTimeLeft] = useState(() =>
+    targetTimestamp ? Math.max(0, Math.floor((targetTimestamp - Date.now()) / 1000)) : 0
+  );
+
+  useEffect(() => {
+    if (!targetTimestamp) return;
+    
+    // Initial sync
+    setTimeLeft(Math.max(0, Math.floor((targetTimestamp - Date.now()) / 1000)));
+    const handle = setInterval(() => {
+      setTimeLeft(
+        Math.max(0, Math.floor((targetTimestamp - Date.now()) / 1000)),
+      );
+    }, 1000);
+    return () => clearInterval(handle);
+  }, [targetTimestamp]);
+
+  if (!targetTimestamp && !forceShowButton) return null;
+
+  const minutes = Math.floor(timeLeft / 60);
+  const seconds = String(timeLeft % 60).padStart(2, "0");
+  const progressPercent = targetTimestamp ? (timeLeft / durationSeconds) * 100 : 0;
+
+  return (
+    <div className="flex items-center gap-4 rounded-xl bg-black/15 px-4 py-2.5 shadow-inner backdrop-blur-sm">
+      {/* Left Section (Info) */}
+      {targetTimestamp !== null && (
+        <div className="flex w-[210px] flex-col gap-1.5">
+          <span className="text-xs font-semibold text-white/95">
+            Cuộc trò chuyện sẽ làm mới sau: {minutes}:{seconds}
+          </span>
+          <div className="h-1 w-full overflow-hidden rounded-full bg-white/20">
+            <div
+              className="h-full rounded-full bg-white/90 transition-all duration-1000 ease-linear"
+              style={{ width: `${Math.min(100, Math.max(0, progressPercent))}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Middle: Vertical divider */}
+      {targetTimestamp !== null && (
+        <div className="h-8 w-px bg-white/20" />
+      )}
+
+      {/* Right Section (Action) */}
+      <button
+        type="button"
+        onClick={onClear}
+        className="group flex cursor-pointer items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-sm font-bold shadow-md transition-all hover:scale-105 hover:brightness-110 active:scale-95"
+        style={{ color: theme.accent }}
+      >
+        <RotateCcw className="h-4 w-4 transition-transform group-hover:-rotate-90" strokeWidth={2.5} />
+        <span>Làm mới ngay</span>
+      </button>
+    </div>
+  );
+}
 
 interface ChatConversationProps {
-  apiConfigured: boolean
-  departmentDescription: string
-  departmentName: string
-  errorMessage: string
-  inputValue: string
-  isListening: boolean
-  isSpeaking: boolean
-  isSubmitting: boolean
-  isTranscribing: boolean
-  messages: ChatThreadMessage[]
-  onInputChange: (value: string) => void
-  onInputKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void
-  onPromptSelect: (prompt: string) => void
-  onStopSpeaking: () => void
-  onSubmit: () => void
-  onVoicePressStart: () => void
-  onVoicePressEnd: () => void
-  placeholder: string
-  recognitionSupported: boolean
-  scrollRef: RefObject<HTMLDivElement | null>
-  suggestedPrompts: string[]
-  theme: DepartmentTheme
+  apiConfigured: boolean;
+  autoClearTarget: number | null;
+  departmentDescription: string;
+  departmentName: string;
+  errorMessage: string;
+  inputValue: string;
+  isListening: boolean;
+  isSpeaking: boolean;
+  isSubmitting: boolean;
+  isTranscribing: boolean;
+  messages: ChatThreadMessage[];
+  onInputChange: (value: string) => void;
+  onInputKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
+  onPromptSelect: (prompt: string) => void;
+  onStopSpeaking: () => void;
+  onSubmit: () => void;
+  onClearConversation: () => void;
+  onVoicePressStart: () => void;
+  onVoicePressEnd: () => void;
+  placeholder: string;
+  recognitionSupported: boolean;
+  scrollRef: RefObject<HTMLDivElement | null>;
+  suggestedPrompts: string[];
+  theme: DepartmentTheme;
 }
 
 export function ChatConversation({
   apiConfigured,
+  autoClearTarget,
   departmentDescription,
   departmentName,
   errorMessage,
@@ -56,6 +132,7 @@ export function ChatConversation({
   onPromptSelect,
   onStopSpeaking,
   onSubmit,
+  onClearConversation,
   onVoicePressStart,
   onVoicePressEnd,
   placeholder,
@@ -64,27 +141,49 @@ export function ChatConversation({
   suggestedPrompts,
   theme,
 }: ChatConversationProps) {
-  const disabled = !apiConfigured || isSubmitting
+  const disabled = !apiConfigured || isSubmitting;
   const shouldShowWaitingState =
     isSubmitting &&
     !(
       messages.length > 0 &&
       messages[messages.length - 1].role === "assistant" &&
       messages[messages.length - 1].content.length > 0
-    )
-  const waitingIndicatorMode = theme.waitingIndicatorMode === "video" ? "video" : "text"
-  const waitingVideoUrl = theme.waitingVideoUrl || "/Robot-dao-boi.webm"
+    );
+  const waitingIndicatorMode =
+    theme.waitingIndicatorMode === "video" ? "video" : "text";
+  const waitingVideoUrl = theme.waitingVideoUrl || "/Robot-dao-boi.webm";
 
   return (
     <section className="relative flex h-full flex-1 flex-col overflow-hidden rounded-[32px] border border-white/70 bg-white/84 shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
-      <div className="px-6 py-4 md:px-8" style={{ backgroundColor: theme.accent }}>
-        <h2 className="text-lg font-bold text-white md:text-xl">{departmentName}</h2>
-        {departmentDescription ? (
-          <p className="mt-1 text-sm text-white/90">{departmentDescription}</p>
-        ) : null}
+      <div
+        className="flex items-center justify-between px-6 py-4 md:px-8"
+        style={{ backgroundColor: theme.accent }}
+      >
+        <div>
+          <h2 className="text-lg font-bold text-white md:text-xl">
+            {departmentName}
+          </h2>
+          {departmentDescription ? (
+            <p className="mt-1 text-sm text-white/90">
+              {departmentDescription}
+            </p>
+          ) : null}
+        </div>
+        <div className="flex items-center">
+          <ResetTimerBar
+            targetTimestamp={messages.length > 1 ? autoClearTarget : null}
+            durationSeconds={(theme.inactivityTimeoutMinutes ?? 5) * 60}
+            onClear={onClearConversation}
+            theme={theme}
+            forceShowButton={messages.length > 1 || !!errorMessage}
+          />
+        </div>
       </div>
 
-      <div ref={scrollRef} className="flex-1 space-y-6 overflow-y-auto px-6 py-6 md:px-8">
+      <div
+        ref={scrollRef}
+        className="flex-1 space-y-6 overflow-y-auto px-6 py-6 md:px-8"
+      >
         {messages.map((message) => (
           <ChatMessage
             key={message.id}
@@ -109,7 +208,10 @@ export function ChatConversation({
                   }}
                 >
                   <FakeStreamingText
-                    text={theme.waitingText || "Đang tìm câu trả lời phù hợp cho bạn"}
+                    text={
+                      theme.waitingText ||
+                      "Đang tìm câu trả lời phù hợp cho bạn"
+                    }
                     speed={theme.waitingTextSpeed || 60}
                     cursorColor={theme.waitingCursorColor || theme.accent}
                   />
@@ -201,11 +303,13 @@ export function ChatConversation({
 
           {!apiConfigured ? (
             <p className="text-center text-sm text-amber-700">
-              {"API của ngành hàng này chưa được cấu hình nên chatbot đang bị khóa gửi tin."}
+              {
+                "API của ngành hàng này chưa được cấu hình nên chatbot đang bị khóa gửi tin."
+              }
             </p>
           ) : null}
         </div>
       </div>
     </section>
-  )
+  );
 }

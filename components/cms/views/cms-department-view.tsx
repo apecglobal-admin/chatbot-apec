@@ -352,6 +352,22 @@ export function CmsDepartmentView({
             />
           </FieldBlock>
 
+          <FieldBlock label="Auto clear chat (phút)" hint="Reset trò chuyện nếu không có tin nhắn mới.">
+            <Input
+              type="number"
+              min={1}
+              max={60}
+              value={department.theme.inactivityTimeoutMinutes ?? 5}
+              onChange={(event) =>
+                onUpdateTheme(
+                  "inactivityTimeoutMinutes",
+                  event.target.value
+                )
+              }
+              className={cmsInputClass}
+            />
+          </FieldBlock>
+
           <FieldBlock label="Endpoint" className="md:col-span-2">
             <Input
               value={department.integration.endpoint}
