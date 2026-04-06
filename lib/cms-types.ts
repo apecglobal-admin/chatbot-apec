@@ -16,6 +16,7 @@ export interface DepartmentTheme {
   waitingText?: string
   waitingTextSpeed?: number
   waitingCursorColor?: string
+  inactivityTimeoutMinutes?: number
 }
 
 export interface DepartmentIntegration {

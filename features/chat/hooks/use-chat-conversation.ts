@@ -30,19 +30,25 @@ export function useChatConversation({
     createWelcomeMessage(department.welcomeMessage),
   ])
   const [userId, setUserId] = useState("")
+  const [conversationId, setConversationId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
 
   // Keep a ref to the abort controller so we can cancel in-flight streams
   const abortRef = useRef<AbortController | null>(null)
 
-  useEffect(() => {
-    // Abort any in-flight stream when department changes
+  const clearConversation = useCallback(() => {
     abortRef.current?.abort()
     setMessages([createWelcomeMessage(department.welcomeMessage)])
+    setConversationId(null)
     setIsSubmitting(false)
     setErrorMessage("")
-  }, [department.slug, department.welcomeMessage])
+  }, [department.welcomeMessage])
+
+  useEffect(() => {
+    // Abort any in-flight stream when department changes
+    clearConversation()
+  }, [department.slug, clearConversation])
 
   useEffect(() => {
     setMessages((current) =>
@@ -99,6 +105,7 @@ export function useChatConversation({
             departmentSlug: department.slug,
             message: content,
             userId,
+            conversationId,
           }),
           signal: controller.signal,
         })
@@ -150,6 +157,7 @@ export function useChatConversation({
                 chunk?: string
                 done?: boolean
                 response?: string
+                conversation_id?: string
               }
 
               if (data.chunk) {
@@ -166,15 +174,20 @@ export function useChatConversation({
               }
 
               // When done, use the full response if available
-              if (data.done && data.response) {
-                fullContent = data.response
-                setMessages((current) =>
-                  current.map((msg) =>
-                    msg.id === assistantMessageId
-                      ? { ...msg, content: fullContent }
-                      : msg,
-                  ),
-                )
+              if (data.done) {
+                if (data.conversation_id) {
+                  setConversationId(data.conversation_id)
+                }
+                if (data.response) {
+                  fullContent = data.response
+                  setMessages((current) =>
+                    current.map((msg) =>
+                      msg.id === assistantMessageId
+                        ? { ...msg, content: fullContent }
+                        : msg,
+                    ),
+                  )
+                }
               }
             } catch {
               // Skip malformed JSON lines
@@ -190,6 +203,7 @@ export function useChatConversation({
               chunk?: string
               done?: boolean
               response?: string
+              conversation_id?: string
             }
 
             if (data.chunk) {
@@ -203,15 +217,20 @@ export function useChatConversation({
               )
             }
 
-            if (data.done && data.response) {
-              fullContent = data.response
-              setMessages((current) =>
-                current.map((msg) =>
-                  msg.id === assistantMessageId
-                    ? { ...msg, content: fullContent }
-                    : msg,
-                ),
-              )
+            if (data.done) {
+              if (data.conversation_id) {
+                setConversationId(data.conversation_id)
+              }
+              if (data.response) {
+                fullContent = data.response
+                setMessages((current) =>
+                  current.map((msg) =>
+                    msg.id === assistantMessageId
+                      ? { ...msg, content: fullContent }
+                      : msg,
+                  ),
+                )
+              }
             }
           } catch {
             console.warn("[chat] skipping trailing non-JSON buffer:", buffer.trim().slice(0, 100))
@@ -256,10 +275,11 @@ export function useChatConversation({
         abortRef.current = null
       }
     },
-    [apiConfigured, department.slug, isSubmitting, onAssistantMessage, userId],
+    [apiConfigured, conversationId, department.slug, isSubmitting, onAssistantMessage, userId],
   )
 
   return {
+    clearConversation,
     errorMessage,
     isSubmitting,
     messages,
