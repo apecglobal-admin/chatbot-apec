@@ -9,6 +9,63 @@ const requestSchema = z.object({
   rate: z.string().optional(),
 })
 
+const VOICE = "vi-VN-HoaiMyNeural"
+const MAX_RETRIES = 3
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+// Delay toàn cục giữa các request để tránh spam Edge TTS bị rate limit ẩn
+let lastGlobalRequestTime = 0;
+const GLOBAL_DELAY_MS = 500;
+
+/**
+ * msedge-tts sometimes silently closes its stream without emitting any data
+ * or errors for certain texts. This helper retries up to MAX_RETRIES times
+ * with a fresh TTS instance each attempt.
+ */
+async function synthesizeWithRetry(
+  text: string,
+  rateOption?: { rate: string },
+): Promise<Buffer> {
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const tts = new MsEdgeTTS()
+    await tts.setMetadata(VOICE, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3)
+
+    const chunks: Buffer[] = []
+
+    const audioBuffer = await new Promise<Buffer>((resolve, reject) => {
+      const { audioStream } = tts.toStream(text, rateOption)
+
+      audioStream.on("data", (chunk: Buffer) => {
+        chunks.push(chunk)
+      })
+
+      audioStream.on("close", () => {
+        resolve(Buffer.concat(chunks))
+      })
+
+      audioStream.on("error", (err: Error) => {
+        reject(err)
+      })
+    })
+
+    if (audioBuffer.length > 0) {
+      return audioBuffer
+    }
+
+    console.warn(
+      `[TTS] Attempt ${attempt}/${MAX_RETRIES} returned empty audio for text: "${text}"`
+    )
+
+    if (attempt < MAX_RETRIES) {
+      const delay = attempt * 1000
+      await sleep(delay)
+    }
+  }
+
+  throw new Error(`TTS returned empty audio after ${MAX_RETRIES} retries`)
+}
+
 export async function POST(request: Request) {
   try {
     const parsed = requestSchema.safeParse(await request.json())
@@ -21,34 +78,24 @@ export async function POST(request: Request) {
     }
 
     const { text, rate } = parsed.data
+    const rateOption = rate ? { rate } : undefined
 
-    const tts = new MsEdgeTTS()
-    // Sử dụng giọng nữ tiếng Việt chuẩn xác (Hoài My) của Edge Neural
-    await tts.setMetadata("vi-VN-HoaiMyNeural", OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3)
+    // Thêm delay giữa các lần connect lên Edge TTS
+    const now = Date.now();
+    const timeToWait = Math.max(0, lastGlobalRequestTime + GLOBAL_DELAY_MS - now);
+    lastGlobalRequestTime = now + timeToWait;
+    
+    if (timeToWait > 0) {
+      await sleep(timeToWait);
+    }
 
-    const { audioStream } = tts.toStream(text, rate ? { rate } : undefined)
+    const audioBuffer = await synthesizeWithRetry(text, rateOption)
 
-    const readable = new ReadableStream({
-      start(controller) {
-        audioStream.on("data", (chunk: Buffer) => {
-          controller.enqueue(new Uint8Array(chunk))
-        })
-
-        audioStream.on("close", () => {
-          controller.close()
-        })
-
-        audioStream.on("error", (err: Error) => {
-          console.error("[TTS Stream Error]:", err)
-          controller.error(err)
-        })
-      },
-    })
-
-    return new Response(readable, {
+    return new Response(new Uint8Array(audioBuffer), {
       headers: {
         "Content-Type": "audio/mpeg",
         "Cache-Control": "no-cache",
+        "Content-Length": audioBuffer.length.toString(),
       },
     })
   } catch (error) {
