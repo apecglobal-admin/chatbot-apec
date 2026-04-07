@@ -35,6 +35,9 @@ export function useChatConversation({
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
+  const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>(
+    department.suggestedPrompts || []
+  )
 
   // Keep a ref to the abort controller so we can cancel in-flight streams
   const abortRef = useRef<AbortController | null>(null)
@@ -45,6 +48,7 @@ export function useChatConversation({
     setConversationId(null)
     setIsSubmitting(false)
     setErrorMessage("")
+    setSuggestedPrompts(department.suggestedPrompts || [])
   }, [department.welcomeMessage])
 
   useEffect(() => {
@@ -91,6 +95,7 @@ export function useChatConversation({
 
       setMessages((current) => [...current, userMessage])
       setErrorMessage("")
+      setSuggestedPrompts([]) // Clear old suggestions
       setIsSubmitting(true)
 
       // Create an abort controller for this request
@@ -160,6 +165,7 @@ export function useChatConversation({
                 done?: boolean
                 response?: string
                 conversation_id?: string
+                suggestions?: string[]
               }
 
               if (data.chunk) {
@@ -178,10 +184,13 @@ export function useChatConversation({
                 )
               }
 
-              // When done, use the full response if available
+              // When done, finalize conversation metadata
               if (data.done) {
                 if (data.conversation_id) {
                   setConversationId(data.conversation_id)
+                }
+                if (data.suggestions) {
+                  setSuggestedPrompts(data.suggestions)
                 }
                 if (data.response) {
                   fullContent = data.response
@@ -209,6 +218,7 @@ export function useChatConversation({
               done?: boolean
               response?: string
               conversation_id?: string
+              suggestions?: string[]
             }
 
             if (data.chunk) {
@@ -227,6 +237,9 @@ export function useChatConversation({
             if (data.done) {
               if (data.conversation_id) {
                 setConversationId(data.conversation_id)
+              }
+              if (data.suggestions) {
+                setSuggestedPrompts(data.suggestions)
               }
               if (data.response) {
                 fullContent = data.response
@@ -291,5 +304,6 @@ export function useChatConversation({
     isSubmitting,
     messages,
     sendMessage,
+    suggestedPrompts,
   }
 }
