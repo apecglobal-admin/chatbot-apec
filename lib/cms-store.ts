@@ -28,7 +28,7 @@ const departmentThemeSchema = z.object({
 })
 
 const departmentIntegrationSchema = z.object({
-  endpoint: z.string().url(),
+  endpoint: z.string().min(1),
   apiKey: z.string(),
   apiKeyConfigured: z.boolean(),
   partnerUserPrefix: z.string().min(1),
@@ -135,7 +135,7 @@ export const DEFAULT_CONFIG: CmsConfig = {
         waitingVideoUrl: "",
       },
       integration: {
-        endpoint: "https://rag-ai-jn9g.onrender.com/api/external/chat-stream",
+        endpoint: "/api/external/chat-stream",
         apiKey: "",
         apiKeyConfigured: false,
         partnerUserPrefix: "apec-shelf",
@@ -169,7 +169,7 @@ export const DEFAULT_CONFIG: CmsConfig = {
         waitingVideoUrl: "",
       },
       integration: {
-        endpoint: "https://rag-ai-jn9g.onrender.com/api/external/chat-stream",
+        endpoint: "/api/external/chat-stream",
         apiKey: "",
         apiKeyConfigured: false,
         partnerUserPrefix: "apec-shelf",
@@ -203,7 +203,7 @@ export const DEFAULT_CONFIG: CmsConfig = {
         waitingVideoUrl: "",
       },
       integration: {
-        endpoint: "https://rag-ai-jn9g.onrender.com/api/external/chat-stream",
+        endpoint: "/api/external/chat-stream",
         apiKey: "",
         apiKeyConfigured: false,
         partnerUserPrefix: "apec-shelf",
@@ -237,7 +237,7 @@ export const DEFAULT_CONFIG: CmsConfig = {
         waitingVideoUrl: "",
       },
       integration: {
-        endpoint: "https://rag-ai-jn9g.onrender.com/api/external/chat-stream",
+        endpoint: "/api/external/chat-stream",
         apiKey: "",
         apiKeyConfigured: false,
         partnerUserPrefix: "apec-shelf",

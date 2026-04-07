@@ -5,7 +5,7 @@
     "supportPhone": "1900 6868"
   },
   "api": {
-    "endpoint": "https://rag-ai-jn9g.onrender.com/api/external/chat",
+    "endpoint": "/api/external/chat-stream",
     "apiKey": "",
     "partnerUserPrefix": "apec-shelf",
     "requestTimeoutMs": 20000

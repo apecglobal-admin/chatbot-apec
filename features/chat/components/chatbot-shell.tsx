@@ -25,6 +25,7 @@ export function ChatbotShell({
     isSubmitting,
     messages,
     sendMessage,
+    suggestedPrompts,
   } = useChatConversation({
     department,
     apiConfigured,
@@ -178,7 +179,7 @@ export function ChatbotShell({
           placeholder={department.placeholder || ""}
           recognitionSupported={recognitionSupported}
           scrollRef={scrollRef}
-          suggestedPrompts={department.suggestedPrompts}
+          suggestedPrompts={suggestedPrompts}
           theme={department.theme}
           ttsEnabled={ttsEnabled}
           onTtsEnabledChange={(enabled) => {

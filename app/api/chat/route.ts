@@ -60,7 +60,10 @@ export async function POST(request: Request) {
         upstreamBody.conversation_id = parsed.data.conversationId
       }
 
-      const upstream = await fetch(department.integration.endpoint, {
+      const baseUrl = process.env.API_ASSISTANT_BASE_URL || "http://localhost:8000"
+      const endpointUrl = new URL(department.integration.endpoint, baseUrl).toString()
+
+      const upstream = await fetch(endpointUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
