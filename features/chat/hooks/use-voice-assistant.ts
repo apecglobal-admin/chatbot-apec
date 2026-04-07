@@ -302,8 +302,56 @@ export function useVoiceAssistant({
           throw new Error("TTS API error")
         }
 
-        const blob = await response.blob()
-        const url = URL.createObjectURL(blob)
+        if (!response.body) {
+          throw new Error("No response body")
+        }
+
+        const mediaSource = new MediaSource()
+        const url = URL.createObjectURL(mediaSource)
+
+        mediaSource.addEventListener("sourceopen", async () => {
+          try {
+            const sourceBuffer = mediaSource.addSourceBuffer("audio/mpeg")
+            const reader = response.body!.getReader()
+
+            const appendChunk = async (chunk: Uint8Array) => {
+              return new Promise<void>((resolve, reject) => {
+                sourceBuffer.onupdateend = () => {
+                  sourceBuffer.onupdateend = null
+                  sourceBuffer.onerror = null
+                  resolve()
+                }
+                sourceBuffer.onerror = (e) => {
+                  sourceBuffer.onupdateend = null
+                  sourceBuffer.onerror = null
+                  reject(e)
+                }
+                try {
+                  sourceBuffer.appendBuffer(chunk as unknown as BufferSource)
+                } catch (e) {
+                  reject(e)
+                }
+              })
+            }
+
+            while (true) {
+              const { done, value } = await reader.read()
+              if (done) break
+              if (value) {
+                await appendChunk(value)
+              }
+            }
+
+            if (mediaSource.readyState === "open") {
+              mediaSource.endOfStream()
+            }
+          } catch (err) {
+            console.error("Stream error in speak():", err)
+            if (mediaSource.readyState === "open") {
+              mediaSource.endOfStream("network")
+            }
+          }
+        })
 
         if (audioRef.current) {
           audioRef.current.src = url

@@ -1,105 +1,81 @@
-import { NextResponse } from "next/server"
-import { MsEdgeTTS, OUTPUT_FORMAT } from "msedge-tts"
-import { z } from "zod"
+import { NextResponse } from "next/server";
+import { Communicate } from "edge-tts-universal";
+import { z } from "zod";
 
-export const runtime = "nodejs"
+export const runtime = "nodejs";
 
 const requestSchema = z.object({
   text: z.string().min(1),
   rate: z.string().optional(),
-})
+});
 
-const VOICE = "vi-VN-HoaiMyNeural"
-const MAX_RETRIES = 3
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
-// Delay toàn cục giữa các request để tránh spam Edge TTS bị rate limit ẩn
-let lastGlobalRequestTime = 0;
+const VOICE = "vi-VN-HoaiMyNeural";
 const GLOBAL_DELAY_MS = 500;
+let lastGlobalRequestTime = 0;
 
-/**
- * msedge-tts sometimes silently closes its stream without emitting any data
- * or errors for certain texts. This helper retries up to MAX_RETRIES times
- * with a fresh TTS instance each attempt.
- */
-async function synthesizeWithRetry(
-  text: string,
-  rateOption?: { rate: string },
-): Promise<Buffer> {
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    const tts = new MsEdgeTTS()
-    await tts.setMetadata(VOICE, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3)
-
-    const chunks: Buffer[] = []
-
-    const audioBuffer = await new Promise<Buffer>((resolve, reject) => {
-      const { audioStream } = tts.toStream(text, rateOption)
-
-      audioStream.on("data", (chunk: Buffer) => {
-        chunks.push(chunk)
-      })
-
-      audioStream.on("close", () => {
-        resolve(Buffer.concat(chunks))
-      })
-
-      audioStream.on("error", (err: Error) => {
-        reject(err)
-      })
-    })
-
-    if (audioBuffer.length > 0) {
-      return audioBuffer
-    }
-
-    console.warn(
-      `[TTS] Attempt ${attempt}/${MAX_RETRIES} returned empty audio for text: "${text}"`
-    )
-
-    if (attempt < MAX_RETRIES) {
-      const delay = attempt * 1000
-      await sleep(delay)
-    }
-  }
-
-  throw new Error(`TTS returned empty audio after ${MAX_RETRIES} retries`)
-}
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function POST(request: Request) {
   try {
-    const parsed = requestSchema.safeParse(await request.json())
+    const json = await request.json();
+    const parsed = requestSchema.safeParse(json);
 
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Payload không hợp lệ." },
         { status: 400 },
-      )
+      );
     }
 
-    const { text, rate } = parsed.data
-    const rateOption = rate ? { rate } : undefined
+    const { text, rate } = parsed.data;
 
-    // Thêm delay giữa các lần connect lên Edge TTS
+    // 1. Throttling để tránh bị Microsoft chặn
     const now = Date.now();
-    const timeToWait = Math.max(0, lastGlobalRequestTime + GLOBAL_DELAY_MS - now);
+    const timeToWait = Math.max(
+      0,
+      lastGlobalRequestTime + GLOBAL_DELAY_MS - now,
+    );
     lastGlobalRequestTime = now + timeToWait;
-    
-    if (timeToWait > 0) {
-      await sleep(timeToWait);
-    }
+    if (timeToWait > 0) await sleep(timeToWait);
 
-    const audioBuffer = await synthesizeWithRetry(text, rateOption)
+    // 2. Khởi tạo Communicate
+    const communicate = new Communicate(text, {
+      voice: VOICE,
+      rate: rate || "+0%",
+    });
 
-    return new Response(new Uint8Array(audioBuffer), {
+    // 3. Tạo ReadableStream để stream dữ liệu về Client
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          // Lặp qua các chunk từ stream của edge-tts-universal
+          for await (const chunk of communicate.stream()) {
+            if (chunk.type === "audio" && chunk.data) {
+              // Gửi chunk dữ liệu (Uint8Array/Buffer) thẳng tới client
+              controller.enqueue(chunk.data);
+            }
+          }
+          controller.close();
+        } catch (err) {
+          console.error("[Stream Error]:", err);
+          controller.error(err);
+        }
+      },
+    });
+
+    // 4. Trả về Response dạng stream
+    return new Response(stream, {
       headers: {
         "Content-Type": "audio/mpeg",
         "Cache-Control": "no-cache",
-        "Content-Length": audioBuffer.length.toString(),
+        "Transfer-Encoding": "chunked", // Tự động báo cho trình duyệt đây là stream
       },
-    })
+    });
   } catch (error) {
-    console.error("[TTS Error]:", error)
-    return NextResponse.json({ error: "Không thể tạo giọng nói." }, { status: 500 })
+    console.error("[TTS POST Error]:", error);
+    return NextResponse.json(
+      { error: "Không thể khởi tạo stream giọng nói." },
+      { status: 500 },
+    );
   }
 }
