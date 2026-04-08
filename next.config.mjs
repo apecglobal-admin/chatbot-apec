@@ -2,7 +2,7 @@ import path from "path"
 import { fileURLToPath } from "url"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const ortWasmShim = path.join(__dirname, "lib", "onnxruntime-web-wasm-shim.js")
+const ortWasmShim = path.join(__dirname, "src", "lib", "onnxruntime-web-wasm-shim.js")
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -15,7 +15,7 @@ const nextConfig = {
   },
   turbopack: {
     resolveAlias: {
-      "onnxruntime-web/wasm": "./lib/onnxruntime-web-wasm-shim.js",
+      "onnxruntime-web/wasm": "./src/lib/onnxruntime-web-wasm-shim.js",
     },
   },
   webpack: (config) => {
