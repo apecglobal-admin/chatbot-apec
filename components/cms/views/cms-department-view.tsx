@@ -261,14 +261,15 @@ export function CmsDepartmentView({
                 <div className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-2.5">
                   <input
                     type="color"
-                    value={department.theme[field]}
+                    value={department.theme[field] || "#000000"}
                     onChange={(event) => onUpdateTheme(field, event.target.value)}
                     className="h-9 w-10 rounded-lg border-0 bg-transparent"
                   />
                   <Input
-                    value={department.theme[field]}
+                    value={department.theme[field] || ""}
                     onChange={(event) => onUpdateTheme(field, event.target.value)}
                     className="h-9 rounded-xl border-0 bg-white shadow-none"
+                    placeholder="Mặc định"
                   />
                 </div>
               </FieldBlock>
@@ -469,6 +470,24 @@ export function CmsDepartmentView({
                       </span>
                     )}
                   </div>
+
+                  {department.suggestedPrompts.length > 0 && (
+                    <div className="flex flex-wrap items-center justify-center gap-1.5 pt-2">
+                       {department.suggestedPrompts.slice(0, 3).map((prompt) => (
+                        <div
+                          key={prompt}
+                          className="rounded-full border px-2.5 py-1 text-[10px] font-medium"
+                          style={{
+                            backgroundColor: department.theme.suggestedPromptsBgColor || hexToRgba(department.theme.accent, 0.9),
+                            color: department.theme.suggestedPromptsTextColor || (department.theme.suggestedPromptsBgColor ? undefined : "#F1F5F9"),
+                            borderColor: department.theme.suggestedPromptsBgColor ? "transparent" : hexToRgba(department.theme.accent, 0.14),
+                          }}
+                        >
+                          {prompt}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

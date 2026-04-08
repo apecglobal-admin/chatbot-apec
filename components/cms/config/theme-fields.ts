@@ -11,4 +11,6 @@ export const themeFields: Array<{
   { field: "userBubble", label: "User bubble" },
   { field: "assistantBubble", label: "Assistant bubble" },
   { field: "badge", label: "Badge text" },
+  { field: "suggestedPromptsBgColor", label: "Màu nền gợi ý" },
+  { field: "suggestedPromptsTextColor", label: "Màu chữ gợi ý" },
 ]

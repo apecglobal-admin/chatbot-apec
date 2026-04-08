@@ -119,19 +119,8 @@ export function ChatbotShell({
     [apiConfigured, isSubmitting, sendMessage, stopListening, stopSpeaking],
   )
 
-  const backgroundImage = department.theme.backgroundImageUrl
-    ? `linear-gradient(180deg, rgba(247,244,236,0.94) 0%, rgba(238,247,240,0.94) 52%, rgba(247,240,233,0.96) 100%), url("${department.theme.backgroundImageUrl}")`
-    : "linear-gradient(180deg,#F7F4EC_0%,#EEF7F0_52%,#F7F0E9_100%)"
-
   return (
-    <main
-      className="relative flex h-screen flex-col px-4 py-6 md:px-8"
-      style={{
-        backgroundImage,
-        backgroundPosition: "center",
-        backgroundSize: department.theme.backgroundImageUrl ? "cover" : undefined,
-      }}
-    >
+    <main className="relative flex h-screen flex-col px-4 py-6 md:px-8 bg-slate-50/50">
       <WalkingRobot />
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-[320px] opacity-60"

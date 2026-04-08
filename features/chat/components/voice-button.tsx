@@ -109,7 +109,7 @@ export function VoiceButton({
         </button>
       </div>
 
-      <div className="space-y-1 text-center">
+      <div className="space-y-1 text-center bg-white/70 px-4 py-2 rounded-full">
         <p className="text-sm font-semibold text-slate-900">
           {showWave
             ? "Đang nghe... thả để gửi"
