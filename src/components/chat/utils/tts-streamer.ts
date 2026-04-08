@@ -71,6 +71,7 @@ export class TTSStreamer {
       .replace(/(\d),(\d{3})/g, "$1$2") // 72,155 → "72155" (bỏ dấu phẩy ngăn cách hàng nghìn)
       .replace(/VNĐ|VND\b/gi, "đồng") // VNĐ → "đồng"
       .replace(/kg\b/gi, "ki-lô-gam")
+      .replace(/Ecoop/gi, "Ê cóp")
       // Xóa xuống dòng
       .replace(/[\n\r]+/g, " ")
       .trim();
