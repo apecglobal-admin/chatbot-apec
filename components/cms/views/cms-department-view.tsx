@@ -1,6 +1,7 @@
-import { Bot, LayoutTemplate, Palette, Settings2 } from "lucide-react"
+import { Bot, ExternalLink, Palette, Settings2 } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
+
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -22,6 +23,7 @@ import {
   cmsInsetClass,
   cmsTextareaClass,
 } from "../shared/styles"
+import { CmsDepartmentPreview } from "./cms-department-preview"
 
 interface CmsDepartmentViewProps {
   department: DepartmentConfig
@@ -52,19 +54,6 @@ export function CmsDepartmentView({
 }: CmsDepartmentViewProps) {
   const waitingIndicatorMode =
     department.theme.waitingIndicatorMode === "video" ? "video" : "text"
-  const waitingVideoUrl = department.theme.waitingVideoUrl || "/Robot-dao-boi.webm"
-  const previewBackground = department.theme.backgroundImageUrl
-    ? {
-        backgroundImage: `linear-gradient(180deg, ${hexToRgba(
-          department.theme.panel,
-          0.9,
-        )} 0%, ${hexToRgba(department.theme.surface, 0.86)} 100%), url(${department.theme.backgroundImageUrl})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }
-    : {
-        backgroundImage: `linear-gradient(135deg, ${department.theme.panel} 0%, ${department.theme.surface} 100%)`,
-      }
 
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -125,11 +114,11 @@ export function CmsDepartmentView({
             />
           </FieldBlock>
 
-          <FieldBlock label="Placeholder ô chat">
-            <Input
+          <FieldBlock label="Placeholder ô chat" className="md:col-span-2">
+            <Textarea
               value={department.placeholder}
               onChange={(event) => onUpdateDepartment("placeholder", event.target.value)}
-              className={cmsInputClass}
+              className={cmsTextareaClass}
             />
           </FieldBlock>
 
@@ -261,14 +250,15 @@ export function CmsDepartmentView({
                 <div className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-2.5">
                   <input
                     type="color"
-                    value={department.theme[field]}
+                    value={department.theme[field] || "#000000"}
                     onChange={(event) => onUpdateTheme(field, event.target.value)}
                     className="h-9 w-10 rounded-lg border-0 bg-transparent"
                   />
                   <Input
-                    value={department.theme[field]}
+                    value={department.theme[field] || ""}
                     onChange={(event) => onUpdateTheme(field, event.target.value)}
                     className="h-9 rounded-xl border-0 bg-white shadow-none"
+                    placeholder="Mặc định"
                   />
                 </div>
               </FieldBlock>
@@ -336,6 +326,37 @@ export function CmsDepartmentView({
             />
           </FieldBlock>
 
+          <FieldBlock
+            label="API key"
+            hint={
+              department.integration.apiKeyConfigured
+                ? "Để trống nếu giữ key hiện tại."
+                : "Thiếu API key."
+            }
+            className="md:col-span-2"
+            isError={!department.integration.apiKeyConfigured}
+          >
+            <Input
+              type="password"
+              value={department.integration.apiKey}
+              onChange={(event) => onUpdateIntegration("apiKey", event.target.value)}
+              className={cmsInputClass}
+              placeholder={
+                department.integration.apiKeyConfigured
+                  ? "******"
+                  : "Nhập API key"
+              }
+            />
+          </FieldBlock>
+
+          <FieldBlock label="Endpoint" className="md:col-span-2">
+            <Input
+              value={department.integration.endpoint}
+              onChange={(event) => onUpdateIntegration("endpoint", event.target.value)}
+              className={cmsInputClass}
+            />
+          </FieldBlock>
+
           <FieldBlock label="Timeout request (ms)">
             <Input
               type="number"
@@ -347,6 +368,16 @@ export function CmsDepartmentView({
                   "requestTimeoutMs",
                   Number(event.target.value) || 20000,
                 )
+              }
+              className={cmsInputClass}
+            />
+          </FieldBlock>
+
+          <FieldBlock label="User prefix">
+            <Input
+              value={department.integration.partnerUserPrefix}
+              onChange={(event) =>
+                onUpdateIntegration("partnerUserPrefix", event.target.value)
               }
               className={cmsInputClass}
             />
@@ -368,139 +399,29 @@ export function CmsDepartmentView({
             />
           </FieldBlock>
 
-          <FieldBlock label="Endpoint" className="md:col-span-2">
-            <Input
-              value={department.integration.endpoint}
-              onChange={(event) => onUpdateIntegration("endpoint", event.target.value)}
-              className={cmsInputClass}
-            />
-          </FieldBlock>
-
-          <FieldBlock label="User prefix">
-            <Input
-              value={department.integration.partnerUserPrefix}
-              onChange={(event) =>
-                onUpdateIntegration("partnerUserPrefix", event.target.value)
-              }
-              className={cmsInputClass}
-            />
-          </FieldBlock>
-
-          <FieldBlock
-            label="API key riêng"
-            hint={
-              department.integration.apiKeyConfigured
-                ? "Để trống nếu giữ key hiện tại."
-                : "Nhập key riêng để tách luồng chatbot này."
-            }
-            className="md:col-span-2"
-          >
-            <Input
-              type="password"
-              value={department.integration.apiKey}
-              onChange={(event) => onUpdateIntegration("apiKey", event.target.value)}
-              className={cmsInputClass}
-              placeholder={
-                department.integration.apiKeyConfigured
-                  ? "Để trống để giữ API key hiện tại"
-                  : "Nhập API key riêng"
-              }
-            />
-          </FieldBlock>
+          <div className="md:col-span-2 mt-2 pt-4 border-t border-slate-100">
+            <Button
+              variant="default"
+              className="w-full gap-2 rounded-2xl bg-indigo-600 font-semibold text-white shadow-lg shadow-indigo-200 transition-all hover:bg-indigo-700 hover:shadow-indigo-300 active:scale-[0.98]"
+              asChild
+            >
+              <a
+                href="https://chatbot.apecglobal.net/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Đào tạo chatbot
+              </a>
+            </Button>
+            <p className="mt-2 text-center text-xs text-slate-400 font-medium">
+              Truy cập hệ thống quản trị tri thức để đào tạo thêm dữ liệu cho chatbot.
+            </p>
+          </div>
         </SectionCard>
       </div>
 
-      <SectionCard
-        title="Preview"
-        description="Kiểm tra giao diện trước khi lưu"
-        icon={LayoutTemplate}
-        className="h-fit xl:sticky xl:top-4"
-      >
-        <div className="space-y-3">
-          <div className="overflow-hidden rounded-[20px] border border-slate-200 bg-white">
-            <div className="p-3" style={previewBackground}>
-              <div className="rounded-[18px] border border-slate-200/80 bg-white/90 p-4 backdrop-blur">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-950">{department.name}</p>
-                    <p className="text-xs text-slate-500">{department.zoneLabel}</p>
-                  </div>
-                  <Badge
-                    className="rounded-full px-3 py-1"
-                    style={{
-                      backgroundColor: department.theme.accentSoft,
-                      color: department.theme.badge,
-                    }}
-                  >
-                    Live preview
-                  </Badge>
-                </div>
-
-                <div className="mt-4 space-y-3">
-                  <div
-                    className="ml-auto max-w-[88%] rounded-[18px] px-4 py-3 text-sm text-white"
-                    style={{ backgroundColor: department.theme.userBubble }}
-                  >
-                    {department.suggestedPrompts[0] ||
-                      "Khách đang hỏi về sản phẩm tại quầy này."}
-                  </div>
-                  <div
-                    className="max-w-[88%] rounded-[18px] px-4 py-3 text-sm text-slate-900"
-                    style={{ backgroundColor: department.theme.assistantBubble }}
-                  >
-                    {department.welcomeMessage || "Lời chào chatbot sẽ hiển thị tại đây."}
-                  </div>
-                  <div className="max-w-[88%] rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
-                    {waitingIndicatorMode === "video" ? (
-                      <video
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        preload="auto"
-                        className="h-20 w-20 rounded-2xl object-contain"
-                      >
-                        <source src={waitingVideoUrl} />
-                      </video>
-                    ) : (
-                      <span>
-                        {department.theme.waitingText ||
-                          "Đang tìm câu trả lời phù hợp cho bạn"}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className={`${cmsInsetClass} space-y-2 px-3 py-3`}>
-            <div className="flex items-center justify-between gap-4 text-sm">
-              <span className="text-slate-500">Assistant slug</span>
-              <span className="font-semibold text-slate-950">
-                {department.integration.assistantSlug}
-              </span>
-            </div>
-            <div className="flex items-center justify-between gap-4 text-sm">
-              <span className="text-slate-500">Prompt gợi ý</span>
-              <span className="font-semibold text-slate-950">
-                {department.suggestedPrompts.length}
-              </span>
-            </div>
-            <div className="flex items-center justify-between gap-4 text-sm">
-              <span className="text-slate-500">Media</span>
-              <span className="font-semibold text-slate-950">
-                {department.theme.backgroundImageUrl ||
-                department.theme.botAvatarUrl ||
-                department.theme.headerLogoUrl ||
-                department.theme.waitingVideoUrl
-                  ? "Đã có"
-                  : "Mặc định"}
-              </span>
-            </div>
-          </div>
-        </div>
-      </SectionCard>
+      <CmsDepartmentPreview department={department} />
     </div>
   )
 }

@@ -5,6 +5,8 @@ import type { KeyboardEvent, RefObject } from "react";
 import { RotateCcw, Send, Volume2, VolumeX } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { DepartmentTheme } from "@/lib/cms-types";
 import { hexToRgba } from "@/lib/color";
@@ -157,10 +159,14 @@ export function ChatConversation({
     theme.waitingIndicatorMode === "video" ? "video" : "text";
   const waitingVideoUrl = theme.waitingVideoUrl || "/Robot-dao-boi.webm";
 
+  const backgroundImage = theme.backgroundImageUrl
+    ? `url("${theme.backgroundImageUrl}")`
+    : "linear-gradient(180deg,#F7F4EC_0%,#EEF7F0_52%,#F7F0E9_100%)";
+
   return (
     <section className="relative flex h-full flex-1 flex-col overflow-hidden rounded-[32px] border border-white/70 bg-white/84 shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
       <div
-        className="flex items-center justify-between px-6 py-4 md:px-8"
+        className="relative z-10 shrink-0 flex items-center justify-between px-6 py-4 md:px-8"
         style={{ backgroundColor: theme.accent }}
       >
         <div>
@@ -185,9 +191,17 @@ export function ChatConversation({
       </div>
 
       <div
-        ref={scrollRef}
-        className="flex-1 space-y-6 overflow-y-auto px-6 py-6 md:px-8"
+        className="relative flex flex-1 flex-col overflow-hidden"
+        style={{
+          backgroundImage,
+          backgroundPosition: "center",
+          backgroundSize: theme.backgroundImageUrl ? "cover" : undefined,
+        }}
       >
+        <div
+          ref={scrollRef}
+          className="relative z-10 flex-1 space-y-6 overflow-y-auto px-6 py-6 md:px-8"
+        >
         {messages.map((message) => (
           <ChatMessage
             key={message.id}
@@ -232,7 +246,7 @@ export function ChatConversation({
         ) : null}
       </div>
 
-      <div className="relative border-t border-slate-200/60 bg-gradient-to-t from-white/95 via-white/90 to-white/70 px-5 pb-5 pt-4 md:px-8">
+      <div className="relative z-10 border-t border-slate-200/60 px-5 pb-5 pt-4 md:px-8">
         {suggestedPrompts.length > 0 ? (
           <div className="mb-4">
             <p className="mb-2 text-center text-xs font-medium uppercase tracking-[0.2em] text-slate-400">
@@ -245,10 +259,14 @@ export function ChatConversation({
                   type="button"
                   onClick={() => onPromptSelect(prompt)}
                   disabled={disabled}
-                  className="rounded-full border px-3.5 py-2 text-sm font-medium text-slate-700 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                  className={[
+                    "rounded-full border px-3.5 py-2 text-sm font-medium transition-all hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50",
+                    !theme.suggestedPromptsTextColor ? "text-slate-100" : ""
+                  ].filter(Boolean).join(" ")}
                   style={{
-                    backgroundColor: hexToRgba(theme.accent, 0.08),
-                    borderColor: hexToRgba(theme.accent, 0.14),
+                    backgroundColor: theme.suggestedPromptsBgColor || hexToRgba(theme.accent, 0.9),
+                    color: theme.suggestedPromptsTextColor || undefined,
+                    borderColor: theme.suggestedPromptsBgColor ? "transparent" : hexToRgba(theme.accent, 0.14),
                   }}
                 >
                   {prompt}
@@ -259,7 +277,7 @@ export function ChatConversation({
         ) : null}
 
         <div className="flex items-end gap-3">
-          <div className="flex-1 rounded-[20px] border border-slate-200 bg-white/90 px-1.5 shadow-sm transition focus-within:border-slate-300 focus-within:shadow-md">
+          <div className="flex-1 rounded-[20px] border border-slate-200 bg-white px-1.5 shadow-sm transition focus-within:border-slate-300 focus-within:shadow-md">
             <Textarea
               value={inputValue}
               onChange={(event) => onInputChange(event.target.value)}
@@ -276,10 +294,10 @@ export function ChatConversation({
             className="h-[52px] w-[52px] shrink-0 rounded-full p-0 text-white shadow-lg transition hover:scale-105"
             style={{
               backgroundColor: theme.accent,
-              boxShadow: `0 12px 28px ${hexToRgba(theme.accent, 0.28)}`,
+              boxShadow: `0 12px 28px ${hexToRgba(theme.accent, 0.7)}`,
             }}
           >
-            <Send className="h-5 w-5" />
+            <Send className="h-6 w-6" />
           </Button>
         </div>
 
@@ -299,26 +317,19 @@ export function ChatConversation({
                 {"Dừng đọc"}
               </Button>
 
-              <button
-                type="button"
-                title={ttsEnabled ? "Tắt đọc tự động" : "Bật đọc tự động"}
-                onClick={() => onTtsEnabledChange(!ttsEnabled)}
-                className={[
-                  "flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-medium transition-all hover:scale-105 active:scale-95",
-                  ttsEnabled
-                    ? "border-emerald-200 bg-emerald-50/70 text-emerald-700 hover:bg-emerald-100 shadow-lg"
-                    : "border-slate-200 bg-white/70 text-slate-500 hover:bg-slate-100 shadow-lg",
-                ].join(" ")}
-              >
-                {ttsEnabled ? (
-                  <Volume2 className="h-4 w-4" />
-                ) : (
-                  <VolumeX className="h-4 w-4" />
-                )}
-                <span className="hidden sm:inline">
-                  {ttsEnabled ? "Đang bật tự đọc" : "Đã tắt tự đọc"}
-                </span>
-              </button>
+              <div className="flex items-center space-x-2 rounded-full border border-slate-200 bg-white/70 px-4 py-2.5 shadow-lg transition-all">
+                <Switch
+                  id="tts-toggle"
+                  checked={ttsEnabled}
+                  onCheckedChange={onTtsEnabledChange}
+                />
+                <Label
+                  htmlFor="tts-toggle"
+                  className="cursor-pointer text-sm font-semibold text-slate-700"
+                >
+                  Tự động đọc
+                </Label>
+              </div>
             </div>
 
             <VoiceButton
@@ -339,6 +350,7 @@ export function ChatConversation({
             </p>
           ) : null}
         </div>
+      </div>
       </div>
     </section>
   );

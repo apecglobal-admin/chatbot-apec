@@ -134,3 +134,28 @@
 @keyframes shimmer {
   100% { transform: translateX(100%); }
 }
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e2e8f0; /* slate-200 */
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1; /* slate-300 */
+}
+
+@keyframes pop-and-fall {
+  0% { transform: translateY(0); opacity: 0.6; }
+  30% { transform: translateY(-7px); opacity: 1; } /* Nhảy cao và nhanh */
+  100% { transform: translateY(0); opacity: 0.6; } /* Rơi chậm */
+}
+
+.animate-pop-and-fall {
+  animation: pop-and-fall 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+}

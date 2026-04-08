@@ -8,6 +8,8 @@ export interface DepartmentTheme {
   userBubble: string
   assistantBubble: string
   badge: string
+  suggestedPromptsBgColor?: string
+  suggestedPromptsTextColor?: string
   backgroundImageUrl?: string
   botAvatarUrl?: string
   headerLogoUrl?: string
