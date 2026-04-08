@@ -327,7 +327,7 @@ export function ChatConversation({
                   htmlFor="tts-toggle"
                   className="cursor-pointer text-sm font-semibold text-slate-700"
                 >
-                  Tự đọc
+                  Tự động đọc
                 </Label>
               </div>
             </div>

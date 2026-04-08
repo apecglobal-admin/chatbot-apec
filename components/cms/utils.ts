@@ -29,7 +29,7 @@ export function emptyDepartment(index: number): DepartmentConfig {
       waitingVideoUrl: "",
     },
     integration: {
-      endpoint: "https://rag-ai-jn9g.onrender.com/api/external/chat-stream",
+      endpoint: "/api/external/chat-stream",
       apiKey: "",
       apiKeyConfigured: false,
       partnerUserPrefix: "apec-shelf",
