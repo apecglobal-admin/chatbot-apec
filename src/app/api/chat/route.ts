@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     try {
       const upstreamBody: Record<string, unknown> = {
         message: parsed.data.message,
-        user_id: `${department.integration.partnerUserPrefix}-${parsed.data.userId}`,
+        user_id: `ecoop-${parsed.data.userId}`,
         metadata: {
           assistant: department.integration.assistantSlug,
         },
@@ -92,13 +92,14 @@ export async function POST(request: Request) {
         )
       }
 
-      // Pipe the upstream NDJSON streaming body directly to the client
+      // The upstream API already sends SSE format, just pass it through
       return new Response(upstream.body, {
         status: 200,
         headers: {
-          "Content-Type": "application/x-ndjson; charset=utf-8",
+          "Content-Type": "text/event-stream; charset=utf-8",
           "Cache-Control": "no-cache, no-store",
           "X-Accel-Buffering": "no",
+          "Connection": "keep-alive",
         },
       })
     } catch (error) {
