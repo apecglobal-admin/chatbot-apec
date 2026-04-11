@@ -41,20 +41,69 @@ export function useChatConversation({
 
   // Keep a ref to the abort controller so we can cancel in-flight streams
   const abortRef = useRef<AbortController | null>(null)
+  // Keep a ref to conversationId so event listeners always read the latest value
+  const conversationIdRef = useRef<string | null>(null)
+
+  const sendCloseBeacon = useCallback(
+    (convId: string) => {
+      const payload = JSON.stringify({ departmentSlug: department.slug, conversationId: convId })
+      // sendBeacon is the only reliable way to send a request on page unload
+      const sent = navigator.sendBeacon(
+        "/api/close-conversation",
+        new Blob([payload], { type: "application/json" }),
+      )
+      if (!sent) {
+        // Fallback: keepalive fetch (works if page hasn't fully unloaded yet)
+        void fetch("/api/close-conversation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+          keepalive: true,
+        }).catch(() => undefined)
+      }
+    },
+    [department.slug],
+  )
 
   const clearConversation = useCallback(() => {
     abortRef.current?.abort()
+    // Close the current conversation before resetting
+    if (conversationIdRef.current) {
+      sendCloseBeacon(conversationIdRef.current)
+    }
     setMessages([createWelcomeMessage(department.welcomeMessage)])
     setConversationId(null)
+    conversationIdRef.current = null
     setIsSubmitting(false)
     setErrorMessage("")
     setSuggestedPrompts(department.suggestedPrompts || [])
-  }, [department.welcomeMessage])
+  }, [department.welcomeMessage, sendCloseBeacon])
 
   useEffect(() => {
     // Abort any in-flight stream when department changes
     clearConversation()
   }, [department.slug, clearConversation])
+
+  // Auto-close conversation when user closes the tab / browser
+  useEffect(() => {
+    const handleUnload = () => {
+      if (conversationIdRef.current) {
+        sendCloseBeacon(conversationIdRef.current)
+      }
+    }
+
+    window.addEventListener("beforeunload", handleUnload)
+    // visibilitychange catches mobile cases where beforeunload may not fire
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") {
+        handleUnload()
+      }
+    })
+
+    return () => {
+      window.removeEventListener("beforeunload", handleUnload)
+    }
+  }, [sendCloseBeacon])
 
   useEffect(() => {
     setMessages((current) =>
@@ -204,6 +253,7 @@ export function useChatConversation({
               if (eventType === "done") {
                 if (data.conversation_id) {
                   setConversationId(data.conversation_id)
+                  conversationIdRef.current = data.conversation_id
                 }
                 if (data.suggestions) {
                   setSuggestedPrompts(data.suggestions)
@@ -271,6 +321,7 @@ export function useChatConversation({
               if (eventType === "done") {
                 if (data.conversation_id) {
                   setConversationId(data.conversation_id)
+                  conversationIdRef.current = data.conversation_id
                 }
                 if (data.suggestions) {
                   setSuggestedPrompts(data.suggestions)
