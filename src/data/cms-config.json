@@ -7,7 +7,6 @@
   "api": {
     "endpoint": "/api/external/chat-stream",
     "apiKey": "",
-    "partnerUserPrefix": "apec-shelf",
     "requestTimeoutMs": 20000
   },
   "departments": [

@@ -2,8 +2,15 @@ import "server-only"
 
 import { z } from "zod"
 
+import { decrypt, encrypt } from "@/lib/crypto"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
-import type { CmsConfig, DepartmentConfig } from "@/lib/cms-types"
+import type {
+  CmsConfig,
+  DepartmentConfig,
+  DepartmentIntegration,
+  DepartmentTheme,
+  DepartmentWaitingConfig,
+} from "@/lib/cms-types"
 
 const COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/
 const WAITING_INDICATOR_MODES = ["text", "video"] as const
@@ -21,19 +28,20 @@ const departmentThemeSchema = z.object({
   backgroundImageUrl: z.string().optional(),
   botAvatarUrl: z.string().optional(),
   headerLogoUrl: z.string().optional(),
-  waitingIndicatorMode: z.enum(WAITING_INDICATOR_MODES).optional(),
-  waitingVideoUrl: z.string().optional(),
-  waitingText: z.string().optional(),
-  waitingTextSpeed: z.coerce.number().int().min(20).max(200).optional(),
-  waitingCursorColor: z.string().optional(),
-  inactivityTimeoutMinutes: z.coerce.number().int().min(1).max(60).optional(),
+})
+
+const departmentWaitingConfigSchema = z.object({
+  mode: z.enum(WAITING_INDICATOR_MODES),
+  videoUrl: z.string().optional(),
+  text: z.string().optional(),
+  textSpeed: z.coerce.number().int().min(20).max(200).optional(),
+  cursorColor: z.string().optional(),
 })
 
 const departmentIntegrationSchema = z.object({
   endpoint: z.string().min(1),
   apiKey: z.string(),
   apiKeyConfigured: z.boolean(),
-  partnerUserPrefix: z.string().min(1),
   requestTimeoutMs: z.number().int().min(3000).max(60000),
   assistantSlug: z.string().min(1),
 })
@@ -54,7 +62,9 @@ const departmentSchema = z.object({
   placeholder: z.string().min(1),
   suggestedPrompts: z.array(z.string().min(1)).min(1),
   theme: departmentThemeSchema,
+  waitingConfig: departmentWaitingConfigSchema,
   integration: departmentIntegrationSchema,
+  inactivityTimeoutMinutes: z.coerce.number().int().min(1).max(60).optional(),
 })
 
 const cmsConfigSchema = z
@@ -89,6 +99,8 @@ const cmsConfigSchema = z
   })
 
 
+// ── Row types matching normalized DB tables ─────────────────────────
+
 type DepartmentRow = {
   id: string
   name: string
@@ -97,17 +109,49 @@ type DepartmentRow = {
   description: string
   welcome_message: string
   placeholder: string
-  suggested_prompts: string[]
-  theme: Record<string, string>
-  assistant_slug: string
-  api_endpoint: string
-  api_key: string
-  partner_user_prefix: string
-  request_timeout_ms: number
-  updated_at: string
   display_order: number
   is_active: boolean
+  inactivity_timeout_minutes: number
+  suggested_prompts: string[]
+  updated_at: string
+  created_at: string
 }
+
+type ThemeRow = {
+  department_id: string
+  accent: string
+  accent_soft: string
+  panel: string
+  surface: string
+  user_bubble: string
+  assistant_bubble: string
+  badge: string
+  suggested_prompts_bg_color: string
+  suggested_prompts_text_color: string
+  background_image_url: string
+  bot_avatar_url: string
+  header_logo_url: string
+}
+
+type IntegrationRow = {
+  department_id: string
+  api_endpoint: string
+  api_key_encrypted: string
+  request_timeout_ms: number
+  assistant_slug: string
+}
+
+type WaitingConfigRow = {
+  department_id: string
+  mode: string
+  video_url: string
+  text_content: string
+  text_speed: number
+  cursor_color: string
+}
+
+
+// ── Default config ──────────────────────────────────────────────────
 
 export const DEFAULT_CONFIG: CmsConfig = {
   departments: [
@@ -133,17 +177,19 @@ export const DEFAULT_CONFIG: CmsConfig = {
         userBubble: "#2F855A",
         assistantBubble: "#E8F4EC",
         badge: "#163E2D",
-        waitingIndicatorMode: "text",
-        waitingVideoUrl: "",
+      },
+      waitingConfig: {
+        mode: "video",
+        videoUrl: "",
       },
       integration: {
         endpoint: "/api/external/chat-stream",
         apiKey: "",
         apiKeyConfigured: false,
-        partnerUserPrefix: "apec-shelf",
         requestTimeoutMs: 20000,
-        assistantSlug: "fresh-food",
+        assistantSlug: "",
       },
+      inactivityTimeoutMinutes: 5,
     },
     {
       id: "beverages",
@@ -167,17 +213,19 @@ export const DEFAULT_CONFIG: CmsConfig = {
         userBubble: "#D97706",
         assistantBubble: "#FFF0DB",
         badge: "#7C2D12",
-        waitingIndicatorMode: "text",
-        waitingVideoUrl: "",
+      },
+      waitingConfig: {
+        mode: "video",
+        videoUrl: "",
       },
       integration: {
         endpoint: "/api/external/chat-stream",
         apiKey: "",
         apiKeyConfigured: false,
-        partnerUserPrefix: "apec-shelf",
         requestTimeoutMs: 20000,
-        assistantSlug: "beverage",
+        assistantSlug: "",
       },
+      inactivityTimeoutMinutes: 5,
     },
     {
       id: "household",
@@ -201,17 +249,19 @@ export const DEFAULT_CONFIG: CmsConfig = {
         userBubble: "#0F766E",
         assistantBubble: "#E1F6F3",
         badge: "#134E4A",
-        waitingIndicatorMode: "text",
-        waitingVideoUrl: "",
+      },
+      waitingConfig: {
+        mode: "video",
+        videoUrl: "",
       },
       integration: {
         endpoint: "/api/external/chat-stream",
         apiKey: "",
         apiKeyConfigured: false,
-        partnerUserPrefix: "apec-shelf",
         requestTimeoutMs: 20000,
-        assistantSlug: "homeware",
+        assistantSlug: "",
       },
+      inactivityTimeoutMinutes: 5,
     },
     {
       id: "beauty",
@@ -235,21 +285,26 @@ export const DEFAULT_CONFIG: CmsConfig = {
         userBubble: "#BE185D",
         assistantBubble: "#FFE3EF",
         badge: "#831843",
-        waitingIndicatorMode: "text",
-        waitingVideoUrl: "",
+      },
+      waitingConfig: {
+        mode: "video",
+        videoUrl: "",
       },
       integration: {
         endpoint: "/api/external/chat-stream",
         apiKey: "",
         apiKeyConfigured: false,
-        partnerUserPrefix: "apec-shelf",
         requestTimeoutMs: 20000,
-        assistantSlug: "beauty",
+        assistantSlug: "",
       },
+      inactivityTimeoutMinutes: 5,
     },
   ],
   updatedAt: "2026-03-31T00:00:00.000Z",
 }
+
+
+// ── Helpers ─────────────────────────────────────────────────────────
 
 function createSetupError() {
   return new Error(
@@ -257,7 +312,77 @@ function createSetupError() {
   )
 }
 
-function mapDepartmentRow(row: DepartmentRow, includeSecrets: boolean): DepartmentConfig {
+function mapThemeRow(row: ThemeRow): DepartmentTheme {
+  return {
+    accent: row.accent,
+    accentSoft: row.accent_soft,
+    panel: row.panel,
+    surface: row.surface,
+    userBubble: row.user_bubble,
+    assistantBubble: row.assistant_bubble,
+    badge: row.badge,
+    suggestedPromptsBgColor: row.suggested_prompts_bg_color || "",
+    suggestedPromptsTextColor: row.suggested_prompts_text_color || "",
+    backgroundImageUrl: row.background_image_url || "",
+    botAvatarUrl: row.bot_avatar_url || "",
+    headerLogoUrl: row.header_logo_url || "",
+  }
+}
+
+function mapWaitingConfigRow(row: WaitingConfigRow | undefined): DepartmentWaitingConfig {
+  if (!row) {
+    return { mode: "video", videoUrl: "", text: "", textSpeed: 60, cursorColor: "" }
+  }
+  return {
+    mode: row.mode === "text" ? "text" : "video",
+    videoUrl: row.video_url || "",
+    text: row.text_content || "",
+    textSpeed: row.text_speed || 60,
+    cursorColor: row.cursor_color || "",
+  }
+}
+
+function mapIntegrationRow(
+  row: IntegrationRow | undefined,
+  includeSecrets: boolean,
+): DepartmentIntegration {
+  if (!row) {
+    return {
+      endpoint: "/api/external/chat-stream",
+      apiKey: "",
+      apiKeyConfigured: false,
+      requestTimeoutMs: 20000,
+      assistantSlug: "",
+    }
+  }
+
+  let decryptedKey = ""
+  if (row.api_key_encrypted) {
+    try {
+      decryptedKey = decrypt(row.api_key_encrypted)
+    } catch {
+      // If decryption fails (e.g. migrated plaintext data), treat as plaintext
+      decryptedKey = row.api_key_encrypted
+    }
+  }
+
+  return {
+    endpoint: row.api_endpoint,
+    apiKey: includeSecrets ? decryptedKey : "",
+    apiKeyConfigured: Boolean(row.api_key_encrypted),
+    requestTimeoutMs: row.request_timeout_ms,
+    assistantSlug: row.assistant_slug,
+  }
+}
+
+function mapDepartmentRow(
+  row: DepartmentRow,
+  themeRow: ThemeRow | undefined,
+  integrationRow: IntegrationRow | undefined,
+  waitingConfigRow: WaitingConfigRow | undefined,
+  prompts: string[],
+  includeSecrets: boolean,
+): DepartmentConfig {
   return {
     id: row.id,
     name: row.name,
@@ -266,35 +391,13 @@ function mapDepartmentRow(row: DepartmentRow, includeSecrets: boolean): Departme
     description: row.description,
     welcomeMessage: row.welcome_message,
     placeholder: row.placeholder,
-    suggestedPrompts: row.suggested_prompts,
-    theme: {
-      accent: row.theme.accent,
-      accentSoft: row.theme.accentSoft,
-      panel: row.theme.panel,
-      surface: row.theme.surface,
-      userBubble: row.theme.userBubble,
-      assistantBubble: row.theme.assistantBubble,
-      badge: row.theme.badge,
-      suggestedPromptsBgColor: row.theme.suggestedPromptsBgColor || "",
-      suggestedPromptsTextColor: row.theme.suggestedPromptsTextColor || "",
-      backgroundImageUrl: row.theme.backgroundImageUrl || "",
-      botAvatarUrl: row.theme.botAvatarUrl || "",
-      headerLogoUrl: row.theme.headerLogoUrl || "",
-      waitingIndicatorMode: row.theme.waitingIndicatorMode === "video" ? "video" : "text",
-      waitingVideoUrl: row.theme.waitingVideoUrl || "",
-      waitingText: row.theme.waitingText || "",
-      waitingTextSpeed: Number(row.theme.waitingTextSpeed) || 60,
-      waitingCursorColor: row.theme.waitingCursorColor || "",
-      inactivityTimeoutMinutes: Number(row.theme.inactivityTimeoutMinutes) || 5,
-    },
-    integration: {
-      endpoint: row.api_endpoint,
-      apiKey: includeSecrets ? row.api_key : "",
-      apiKeyConfigured: Boolean(row.api_key),
-      partnerUserPrefix: row.partner_user_prefix,
-      requestTimeoutMs: row.request_timeout_ms,
-      assistantSlug: row.assistant_slug,
-    },
+    suggestedPrompts: prompts,
+    theme: themeRow
+      ? mapThemeRow(themeRow)
+      : DEFAULT_CONFIG.departments[0].theme,
+    waitingConfig: mapWaitingConfigRow(waitingConfigRow),
+    integration: mapIntegrationRow(integrationRow, includeSecrets),
+    inactivityTimeoutMinutes: row.inactivity_timeout_minutes ?? 5,
   }
 }
 
@@ -333,58 +436,86 @@ function sanitizeConfig(
           backgroundImageUrl: department.theme.backgroundImageUrl?.trim() || "",
           botAvatarUrl: department.theme.botAvatarUrl?.trim() || "",
           headerLogoUrl: department.theme.headerLogoUrl?.trim() || "",
-          waitingIndicatorMode:
-            department.theme.waitingIndicatorMode === "video" ? "video" : "text",
-          waitingVideoUrl: department.theme.waitingVideoUrl?.trim() || "",
-          waitingText: department.theme.waitingText?.trim() || "",
-          waitingTextSpeed: department.theme.waitingTextSpeed || 60,
-          waitingCursorColor: department.theme.waitingCursorColor?.trim() || "",
-          inactivityTimeoutMinutes: department.theme.inactivityTimeoutMinutes || 5,
+        },
+        waitingConfig: {
+          mode: department.waitingConfig.mode === "text" ? "text" as const : "video" as const,
+          videoUrl: department.waitingConfig.videoUrl?.trim() || "",
+          text: department.waitingConfig.text?.trim() || "",
+          textSpeed: department.waitingConfig.textSpeed || 60,
+          cursorColor: department.waitingConfig.cursorColor?.trim() || "",
         },
         integration: {
           endpoint: department.integration.endpoint.trim(),
           apiKey: nextApiKey,
           apiKeyConfigured: Boolean(nextApiKey),
-          partnerUserPrefix: department.integration.partnerUserPrefix.trim(),
           requestTimeoutMs: department.integration.requestTimeoutMs,
           assistantSlug: department.integration.assistantSlug.trim(),
         },
+        inactivityTimeoutMinutes: department.inactivityTimeoutMinutes || 5,
       }
     }),
     updatedAt: new Date().toISOString(),
   }
 }
 
+
+// ── Read ────────────────────────────────────────────────────────────
+
 export async function getCmsConfig(options?: { includeSecrets?: boolean }) {
   const includeSecrets = options?.includeSecrets ?? false
   const supabase = getSupabaseAdmin() as any
 
+  // Fetch departments
   const { data: departmentRows, error: departmentError } = await supabase
     .from("departments")
-    .select(
-      "id, name, slug, zone_label, description, welcome_message, placeholder, suggested_prompts, theme, assistant_slug, api_endpoint, api_key, partner_user_prefix, request_timeout_ms, updated_at, display_order, is_active",
-    )
+    .select("id, name, slug, zone_label, description, welcome_message, placeholder, suggested_prompts, display_order, is_active, inactivity_timeout_minutes, updated_at, created_at")
     .eq("is_active", true)
     .order("display_order", { ascending: true })
 
-  if (departmentError) {
+  if (departmentError || !departmentRows?.length) {
     throw createSetupError()
   }
 
-  if (!departmentRows?.length) {
-    throw createSetupError()
-  }
+  const typedRows = departmentRows as DepartmentRow[]
+  const deptIds = typedRows.map((r) => r.id)
 
-  const typedDepartmentRows = departmentRows as DepartmentRow[]
+  // Fetch related tables in parallel
+  const [
+    { data: themeRows },
+    { data: integrationRows },
+    { data: waitingRows },
+  ] = await Promise.all([
+    supabase.from("department_themes").select("*").in("department_id", deptIds),
+    supabase.from("department_integrations").select("*").in("department_id", deptIds),
+    supabase.from("department_waiting_configs").select("*").in("department_id", deptIds),
+  ])
 
-  const updatedAt = typedDepartmentRows
-    .map((row: DepartmentRow) => row.updated_at)
+  // Index by department_id
+  const themeMap = new Map(
+    (themeRows as ThemeRow[] | null)?.map((r) => [r.department_id, r]) ?? [],
+  )
+  const integrationMap = new Map(
+    (integrationRows as IntegrationRow[] | null)?.map((r) => [r.department_id, r]) ?? [],
+  )
+  const waitingMap = new Map(
+    (waitingRows as WaitingConfigRow[] | null)?.map((r) => [r.department_id, r]) ?? [],
+  )
+
+  const updatedAt = typedRows
+    .map((row) => row.updated_at)
     .sort()
     .at(-1)
 
   const config: CmsConfig = {
-    departments: typedDepartmentRows.map((row: DepartmentRow) =>
-      mapDepartmentRow(row, includeSecrets),
+    departments: typedRows.map((row) =>
+      mapDepartmentRow(
+        row,
+        themeMap.get(row.id),
+        integrationMap.get(row.id),
+        waitingMap.get(row.id),
+        row.suggested_prompts || [],
+        includeSecrets,
+      ),
     ),
     updatedAt: updatedAt ?? new Date().toISOString(),
   }
@@ -397,6 +528,9 @@ export async function getCmsConfig(options?: { includeSecrets?: boolean }) {
 
   return parsed.data
 }
+
+
+// ── Write ───────────────────────────────────────────────────────────
 
 export async function saveCmsConfig(input: CmsConfig) {
   const supabase = getSupabaseAdmin() as any
@@ -415,6 +549,7 @@ export async function saveCmsConfig(input: CmsConfig) {
     throw new Error(parsed.error.issues[0]?.message ?? "Dữ liệu CMS không hợp lệ.")
   }
 
+  // 1. Upsert departments
   const departmentPayload = parsed.data.departments.map((department, index) => ({
     id: department.id,
     slug: department.slug,
@@ -424,14 +559,9 @@ export async function saveCmsConfig(input: CmsConfig) {
     welcome_message: department.welcomeMessage,
     placeholder: department.placeholder,
     suggested_prompts: department.suggestedPrompts,
-    theme: department.theme,
-    assistant_slug: department.integration.assistantSlug,
-    api_endpoint: department.integration.endpoint,
-    api_key: department.integration.apiKey,
-    partner_user_prefix: department.integration.partnerUserPrefix,
-    request_timeout_ms: department.integration.requestTimeoutMs,
     display_order: index,
     is_active: true,
+    inactivity_timeout_minutes: department.inactivityTimeoutMinutes ?? 5,
     updated_at: parsed.data.updatedAt,
   }))
 
@@ -443,6 +573,70 @@ export async function saveCmsConfig(input: CmsConfig) {
     throw new Error(upsertError.message)
   }
 
+  // 2. Upsert themes
+  const themePayload = parsed.data.departments.map((department) => ({
+    department_id: department.id,
+    accent: department.theme.accent,
+    accent_soft: department.theme.accentSoft,
+    panel: department.theme.panel,
+    surface: department.theme.surface,
+    user_bubble: department.theme.userBubble,
+    assistant_bubble: department.theme.assistantBubble,
+    badge: department.theme.badge,
+    suggested_prompts_bg_color: department.theme.suggestedPromptsBgColor || "",
+    suggested_prompts_text_color: department.theme.suggestedPromptsTextColor || "",
+    background_image_url: department.theme.backgroundImageUrl || "",
+    bot_avatar_url: department.theme.botAvatarUrl || "",
+    header_logo_url: department.theme.headerLogoUrl || "",
+  }))
+
+  const { error: themeError } = await supabase
+    .from("department_themes")
+    .upsert(themePayload, { onConflict: "department_id" })
+
+  if (themeError) {
+    throw new Error(themeError.message)
+  }
+
+  // 3. Upsert integrations (encrypt api_key)
+  const integrationPayload = parsed.data.departments.map((department) => ({
+    department_id: department.id,
+    api_endpoint: department.integration.endpoint,
+    api_key_encrypted: department.integration.apiKey
+      ? encrypt(department.integration.apiKey)
+      : "",
+    request_timeout_ms: department.integration.requestTimeoutMs,
+    assistant_slug: department.integration.assistantSlug,
+  }))
+
+  const { error: integrationError } = await supabase
+    .from("department_integrations")
+    .upsert(integrationPayload, { onConflict: "department_id" })
+
+  if (integrationError) {
+    throw new Error(integrationError.message)
+  }
+
+  // 4. Upsert waiting configs
+  const waitingPayload = parsed.data.departments.map((department) => ({
+    department_id: department.id,
+    mode: department.waitingConfig.mode,
+    video_url: department.waitingConfig.videoUrl || "",
+    text_content: department.waitingConfig.text || "",
+    text_speed: department.waitingConfig.textSpeed || 60,
+    cursor_color: department.waitingConfig.cursorColor || "",
+  }))
+
+  const { error: waitingError } = await supabase
+    .from("department_waiting_configs")
+    .upsert(waitingPayload, { onConflict: "department_id" })
+
+  if (waitingError) {
+    throw new Error(waitingError.message)
+  }
+
+  // 5. Delete removed departments
+  const nextIds = parsed.data.departments.map((d) => d.id)
   const { data: currentIds, error: currentIdsError } = await supabase
     .from("departments")
     .select("id")
@@ -451,11 +645,11 @@ export async function saveCmsConfig(input: CmsConfig) {
     throw new Error(currentIdsError.message)
   }
 
-  const nextIds = new Set(parsed.data.departments.map((department) => department.id))
+  const nextIdSet = new Set(nextIds)
   const idsToDelete =
     (currentIds as Array<{ id: string }> | null)
       ?.map((row: { id: string }) => row.id)
-      .filter((id: string) => !nextIds.has(id)) ?? []
+      .filter((id: string) => !nextIdSet.has(id)) ?? []
 
   if (idsToDelete.length > 0) {
     const { error: deleteError } = await supabase

@@ -182,7 +182,7 @@ export function ChatConversation({
     clearConversation()
   }, [clearConversation])
 
-  const inactivityTimeoutMinutes = department.theme.inactivityTimeoutMinutes ?? 5
+  const inactivityTimeoutMinutes = department.inactivityTimeoutMinutes ?? 5
 
   useEffect(() => {
     if (messages.length <= 1) {
@@ -225,8 +225,8 @@ export function ChatConversation({
       messages[messages.length - 1].role === "assistant" &&
       messages[messages.length - 1].content.length > 0
     )
-  const waitingIndicatorMode = theme.waitingIndicatorMode === "video" ? "video" : "text"
-  const waitingVideoUrl = theme.waitingVideoUrl || "/Robot-dao-boi.webm"
+  const waitingIndicatorMode = department.waitingConfig.mode === "video" ? "video" : "text"
+  const waitingVideoUrl = department.waitingConfig.videoUrl || "/Robot-dao-boi.webm"
   const backgroundImage = theme.backgroundImageUrl
     ? `url("${theme.backgroundImageUrl}")`
     : "linear-gradient(180deg,#F7F4EC_0%,#EEF7F0_52%,#F7F0E9_100%)"
@@ -299,9 +299,9 @@ export function ChatConversation({
                       }}
                     >
                       <FakeStreamingText
-                        text={theme.waitingText || "Đang tìm câu trả lời phù hợp cho bạn"}
-                        speed={theme.waitingTextSpeed || 60}
-                        cursorColor={theme.waitingCursorColor || theme.accent}
+                        text={department.waitingConfig.text || "Đang tìm câu trả lời phù hợp cho bạn"}
+                        speed={department.waitingConfig.textSpeed || 60}
+                        cursorColor={department.waitingConfig.cursorColor || theme.accent}
                       />
                     </div>
                   )}

@@ -6,6 +6,7 @@ import type { DepartmentConfig } from "@/lib/cms-types"
 
 import type { ChatThreadMessage } from "../types"
 import { createWelcomeMessage, formatChatTimestamp } from "../utils"
+import { generateTimestampId } from "@/lib/utils"
 
 interface UseChatConversationOptions {
   department: DepartmentConfig
@@ -13,14 +14,6 @@ interface UseChatConversationOptions {
   onAssistantMessage?: (text: string) => void
   onAssistantChunk?: (chunk: string) => void
 }
-
-const generateId = () => {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID()
-  }
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-}
-
 
 export function useChatConversation({
   department,
@@ -41,20 +34,69 @@ export function useChatConversation({
 
   // Keep a ref to the abort controller so we can cancel in-flight streams
   const abortRef = useRef<AbortController | null>(null)
+  // Keep a ref to conversationId so event listeners always read the latest value
+  const conversationIdRef = useRef<string | null>(null)
+
+  const sendCloseBeacon = useCallback(
+    (convId: string) => {
+      const payload = JSON.stringify({ departmentSlug: department.slug, conversationId: convId })
+      // sendBeacon is the only reliable way to send a request on page unload
+      const sent = navigator.sendBeacon(
+        "/api/close-conversation",
+        new Blob([payload], { type: "application/json" }),
+      )
+      if (!sent) {
+        // Fallback: keepalive fetch (works if page hasn't fully unloaded yet)
+        void fetch("/api/close-conversation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+          keepalive: true,
+        }).catch(() => undefined)
+      }
+    },
+    [department.slug],
+  )
 
   const clearConversation = useCallback(() => {
     abortRef.current?.abort()
+    // Close the current conversation before resetting
+    if (conversationIdRef.current) {
+      sendCloseBeacon(conversationIdRef.current)
+    }
     setMessages([createWelcomeMessage(department.welcomeMessage)])
     setConversationId(null)
+    conversationIdRef.current = null
     setIsSubmitting(false)
     setErrorMessage("")
     setSuggestedPrompts(department.suggestedPrompts || [])
-  }, [department.welcomeMessage])
+  }, [department.welcomeMessage, sendCloseBeacon])
 
   useEffect(() => {
     // Abort any in-flight stream when department changes
     clearConversation()
   }, [department.slug, clearConversation])
+
+  // Auto-close conversation when user closes the tab / browser
+  useEffect(() => {
+    const handleUnload = () => {
+      if (conversationIdRef.current) {
+        sendCloseBeacon(conversationIdRef.current)
+      }
+    }
+
+    window.addEventListener("beforeunload", handleUnload)
+    // visibilitychange catches mobile cases where beforeunload may not fire
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") {
+        handleUnload()
+      }
+    })
+
+    return () => {
+      window.removeEventListener("beforeunload", handleUnload)
+    }
+  }, [sendCloseBeacon])
 
   useEffect(() => {
     setMessages((current) =>
@@ -67,10 +109,10 @@ export function useChatConversation({
   }, [department.slug])
 
   useEffect(() => {
-    const storageKey = `apec-user-${department.slug}`
+    const storageKey = `ecoop-${department.slug}`
     const currentUserId =
       window.localStorage.getItem(storageKey) ??
-      `${department.slug}-${generateId()}`
+      `${department.slug}-${generateTimestampId()}`
 
     window.localStorage.setItem(storageKey, currentUserId)
     setUserId(currentUserId)
@@ -85,13 +127,13 @@ export function useChatConversation({
       }
 
       const userMessage: ChatThreadMessage = {
-        id: generateId(),
+        id: `user-${generateTimestampId()}`,
         role: "user",
         content,
         timestamp: formatChatTimestamp(),
       }
 
-      const assistantMessageId = generateId()
+      const assistantMessageId = `asst-${generateTimestampId()}`
 
       setMessages((current) => [...current, userMessage])
       setErrorMessage("")
@@ -126,41 +168,43 @@ export function useChatConversation({
           throw new Error("Trình duyệt không hỗ trợ streaming response.")
         }
 
-        // Read the streaming NDJSON response
+        // Read the streaming SSE response
         const reader = response.body.getReader()
         const decoder = new TextDecoder()
         let fullContent = ""
-        let buffer = "" // Buffer for incomplete NDJSON lines across chunk boundaries
-
-        // Add an empty assistant message that we'll update as chunks arrive
-        setMessages((current) => [
-          ...current,
-          {
-            id: assistantMessageId,
-            role: "assistant",
-            content: "",
-            timestamp: formatChatTimestamp(),
-          },
-        ])
+        let buffer = "" // Buffer for incomplete lines across chunk boundaries
+        let assistantMessageAdded = false // Only add message bubble on first chunk
 
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
 
-          // Append decoded text to buffer so partial lines from previous read are included
+          // Append decoded text to buffer so partial lines are preserved
           buffer += decoder.decode(value, { stream: true })
 
-          // Split by newline — the last element may be incomplete (no trailing newline)
-          const lines = buffer.split("\n")
-          // Keep the last (potentially incomplete) segment in the buffer
-          buffer = lines.pop() ?? ""
+          // Split by double newline to get SSE events
+          const events = buffer.split("\n\n")
+          // Keep the last (potentially incomplete) event in the buffer
+          buffer = events.pop() ?? ""
 
-          for (const line of lines) {
-            const trimmed = line.trim()
-            if (!trimmed) continue
+          for (const eventStr of events) {
+            const lines = eventStr.split("\n")
+            let eventType = ""
+            let eventData = ""
+
+            // Parse SSE format: "event: name" and "data: content"
+            for (const line of lines) {
+              if (line.startsWith("event:")) {
+                eventType = line.slice(6).trim()
+              } else if (line.startsWith("data:")) {
+                eventData = line.slice(5).trim()
+              }
+            }
+
+            if (!eventData) continue
 
             try {
-              const data = JSON.parse(trimmed) as {
+              const data = JSON.parse(eventData) as {
                 chunk?: string
                 done?: boolean
                 response?: string
@@ -168,26 +212,41 @@ export function useChatConversation({
                 suggestions?: string[]
               }
 
-              if (data.chunk) {
+              if (eventType === "chunk" && data.chunk) {
                 fullContent += data.chunk
 
                 // Stream audio chunk piece immediately
                 onAssistantChunk?.(data.chunk)
 
-                // Update the assistant message in-place
-                setMessages((current) =>
-                  current.map((msg) =>
-                    msg.id === assistantMessageId
-                      ? { ...msg, content: fullContent }
-                      : msg,
-                  ),
-                )
+                if (!assistantMessageAdded) {
+                  // Add the assistant bubble on the first chunk
+                  assistantMessageAdded = true
+                  setMessages((current) => [
+                    ...current,
+                    {
+                      id: assistantMessageId,
+                      role: "assistant",
+                      content: fullContent,
+                      timestamp: formatChatTimestamp(),
+                    },
+                  ])
+                } else {
+                  // Update the assistant message in-place
+                  setMessages((current) =>
+                    current.map((msg) =>
+                      msg.id === assistantMessageId
+                        ? { ...msg, content: fullContent }
+                        : msg,
+                    ),
+                  )
+                }
               }
 
               // When done, finalize conversation metadata
-              if (data.done) {
+              if (eventType === "done") {
                 if (data.conversation_id) {
                   setConversationId(data.conversation_id)
+                  conversationIdRef.current = data.conversation_id
                 }
                 if (data.suggestions) {
                   setSuggestedPrompts(data.suggestions)
@@ -203,46 +262,46 @@ export function useChatConversation({
                   )
                 }
               }
-            } catch {
-              // Skip malformed JSON lines
-              console.warn("[chat] skipping non-JSON line:", trimmed.slice(0, 100))
+
+              // Suggestions arrive as a separate event after done
+              if (eventType === "suggestions" && data.suggestions) {
+                setSuggestedPrompts(data.suggestions)
+              }
+            } catch (e) {
+              // Skip malformed JSON data
+              console.warn("[chat] skipping malformed SSE data:", eventData.slice(0, 100))
             }
           }
         }
 
         // Process any remaining data in the buffer after stream ends
         if (buffer.trim()) {
-          try {
-            const data = JSON.parse(buffer.trim()) as {
-              chunk?: string
-              done?: boolean
-              response?: string
-              conversation_id?: string
-              suggestions?: string[]
-            }
+          const lines = buffer.trim().split("\n")
+          let eventType = ""
+          let eventData = ""
 
-            if (data.chunk) {
-              fullContent += data.chunk
-              onAssistantChunk?.(data.chunk)
-              
-              setMessages((current) =>
-                current.map((msg) =>
-                  msg.id === assistantMessageId
-                    ? { ...msg, content: fullContent }
-                    : msg,
-                ),
-              )
+          for (const line of lines) {
+            if (line.startsWith("event:")) {
+              eventType = line.slice(6).trim()
+            } else if (line.startsWith("data:")) {
+              eventData = line.slice(5).trim()
             }
+          }
 
-            if (data.done) {
-              if (data.conversation_id) {
-                setConversationId(data.conversation_id)
+          if (eventData) {
+            try {
+              const data = JSON.parse(eventData) as {
+                chunk?: string
+                done?: boolean
+                response?: string
+                conversation_id?: string
+                suggestions?: string[]
               }
-              if (data.suggestions) {
-                setSuggestedPrompts(data.suggestions)
-              }
-              if (data.response) {
-                fullContent = data.response
+
+              if (eventType === "chunk" && data.chunk) {
+                fullContent += data.chunk
+                onAssistantChunk?.(data.chunk)
+                
                 setMessages((current) =>
                   current.map((msg) =>
                     msg.id === assistantMessageId
@@ -251,9 +310,34 @@ export function useChatConversation({
                   ),
                 )
               }
+
+              if (eventType === "done") {
+                if (data.conversation_id) {
+                  setConversationId(data.conversation_id)
+                  conversationIdRef.current = data.conversation_id
+                }
+                if (data.suggestions) {
+                  setSuggestedPrompts(data.suggestions)
+                }
+                if (data.response) {
+                  fullContent = data.response
+                  setMessages((current) =>
+                    current.map((msg) =>
+                      msg.id === assistantMessageId
+                        ? { ...msg, content: fullContent }
+                        : msg,
+                    ),
+                  )
+                }
+              }
+
+              // Suggestions arrive as a separate event after done
+              if (eventType === "suggestions" && data.suggestions) {
+                setSuggestedPrompts(data.suggestions)
+              }
+            } catch (e) {
+              console.warn("[chat] skipping malformed trailing SSE data:", eventData.slice(0, 100))
             }
-          } catch {
-            console.warn("[chat] skipping trailing non-JSON buffer:", buffer.trim().slice(0, 100))
           }
         }
 
@@ -281,7 +365,7 @@ export function useChatConversation({
           return [
             ...filtered,
             {
-              id: generateId(),
+              id: `asst-${generateTimestampId()}`,
               role: "assistant" as const,
               content: fallbackResponse,
               timestamp: formatChatTimestamp(),

@@ -25,8 +25,8 @@ export function CmsDepartmentPreview({
 }: CmsDepartmentPreviewProps) {
   const theme = department.theme;
   const waitingIndicatorMode =
-    theme.waitingIndicatorMode === "video" ? "video" : "text";
-  const waitingVideoUrl = theme.waitingVideoUrl || "/Robot-dao-boi.webm";
+    department.waitingConfig.mode === "video" ? "video" : "text";
+  const waitingVideoUrl = department.waitingConfig.videoUrl || "/Robot-dao-boi.webm";
 
   const backgroundImage = theme.backgroundImageUrl
     ? `url("${theme.backgroundImageUrl}")`
@@ -112,11 +112,11 @@ export function CmsDepartmentPreview({
                     >
                       <FakeStreamingText
                         text={
-                          theme.waitingText ||
+                          department.waitingConfig.text ||
                           "Đang tìm câu trả lời phù hợp cho bạn"
                         }
-                        speed={theme.waitingTextSpeed || 60}
-                        cursorColor={theme.waitingCursorColor || theme.accent}
+                        speed={department.waitingConfig.textSpeed || 60}
+                        cursorColor={department.waitingConfig.cursorColor || theme.accent}
                       />
                     </div>
                   )}
@@ -235,7 +235,7 @@ export function CmsDepartmentPreview({
               {theme.backgroundImageUrl ||
               theme.botAvatarUrl ||
               theme.headerLogoUrl ||
-              theme.waitingVideoUrl
+              department.waitingConfig.videoUrl
                 ? "Đã có"
                 : "Mặc định"}
             </span>

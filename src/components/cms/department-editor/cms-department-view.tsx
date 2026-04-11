@@ -37,8 +37,16 @@ interface CmsDepartmentViewProps {
     field: keyof DepartmentConfig["theme"],
     value: string,
   ) => void
+  onUpdateWaitingConfig: (
+    field: keyof DepartmentConfig["waitingConfig"],
+    value: string | number,
+  ) => void
   onUploadThemeMedia: (
     field: keyof DepartmentConfig["theme"],
+    value: string,
+  ) => Promise<void> | void
+  onUploadWaitingMedia: (
+    field: keyof DepartmentConfig["waitingConfig"],
     value: string,
   ) => Promise<void> | void
 }
@@ -48,10 +56,12 @@ export function CmsDepartmentView({
   onUpdateDepartment,
   onUpdateIntegration,
   onUpdateTheme,
+  onUpdateWaitingConfig,
   onUploadThemeMedia,
+  onUploadWaitingMedia,
 }: CmsDepartmentViewProps) {
   const waitingIndicatorMode =
-    department.theme.waitingIndicatorMode === "video" ? "video" : "text"
+    department.waitingConfig.mode === "text" ? "text" : "video"
 
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -82,14 +92,6 @@ export function CmsDepartmentView({
             <Input
               value={department.slug}
               onChange={(event) => onUpdateDepartment("slug", event.target.value)}
-              className={cmsInputClass}
-            />
-          </FieldBlock>
-
-          <FieldBlock label="ID nội bộ">
-            <Input
-              value={department.id}
-              onChange={(event) => onUpdateDepartment("id", event.target.value)}
               className={cmsInputClass}
             />
           </FieldBlock>
@@ -153,14 +155,14 @@ export function CmsDepartmentView({
           >
             <Select
               value={waitingIndicatorMode}
-              onValueChange={(value) => onUpdateTheme("waitingIndicatorMode", value)}
+              onValueChange={(value) => onUpdateWaitingConfig("mode", value)}
             >
               <SelectTrigger className={`${cmsInputClass} w-full`}>
                 <SelectValue placeholder="Chọn kiểu hiển thị" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="text">Text typewriter</SelectItem>
                 <SelectItem value="video">Video</SelectItem>
+                <SelectItem value="text">Text typewriter</SelectItem>
               </SelectContent>
             </Select>
           </FieldBlock>
@@ -172,8 +174,8 @@ export function CmsDepartmentView({
                 hint="Hiệu ứng typewriter khi chờ AI trả lời."
               >
                 <Input
-                  value={department.theme.waitingText ?? ""}
-                  onChange={(event) => onUpdateTheme("waitingText", event.target.value)}
+                  value={department.waitingConfig.text ?? ""}
+                  onChange={(event) => onUpdateWaitingConfig("text", event.target.value)}
                   className={cmsInputClass}
                   placeholder="Đang tìm câu trả lời phù hợp cho bạn"
                 />
@@ -186,9 +188,9 @@ export function CmsDepartmentView({
                   type="number"
                   min={20}
                   max={200}
-                  value={department.theme.waitingTextSpeed ?? 60}
+                  value={department.waitingConfig.textSpeed ?? 60}
                   onChange={(event) =>
-                    onUpdateTheme("waitingTextSpeed", event.target.value)
+                    onUpdateWaitingConfig("textSpeed", event.target.value)
                   }
                   className={cmsInputClass}
                 />
@@ -198,17 +200,17 @@ export function CmsDepartmentView({
                   <input
                     type="color"
                     value={
-                      department.theme.waitingCursorColor || department.theme.accent
+                      department.waitingConfig.cursorColor || department.theme.accent
                     }
                     onChange={(event) =>
-                      onUpdateTheme("waitingCursorColor", event.target.value)
+                      onUpdateWaitingConfig("cursorColor", event.target.value)
                     }
                     className="h-9 w-10 rounded-lg border-0 bg-transparent"
                   />
                   <Input
-                    value={department.theme.waitingCursorColor ?? ""}
+                    value={department.waitingConfig.cursorColor ?? ""}
                     onChange={(event) =>
-                      onUpdateTheme("waitingCursorColor", event.target.value)
+                      onUpdateWaitingConfig("cursorColor", event.target.value)
                     }
                     className="h-9 rounded-xl border-0 bg-white shadow-none"
                     placeholder={department.theme.accent}
@@ -225,10 +227,10 @@ export function CmsDepartmentView({
               <CloudinaryMediaInput
                 resourceType="video"
                 accept="video/*"
-                value={department.theme.waitingVideoUrl ?? ""}
-                onChange={(value) => onUpdateTheme("waitingVideoUrl", value)}
+                value={department.waitingConfig.videoUrl ?? ""}
+                onChange={(value) => onUpdateWaitingConfig("videoUrl", value)}
                 onUploadComplete={(value) =>
-                  onUploadThemeMedia("waitingVideoUrl", value)
+                  onUploadWaitingMedia("videoUrl", value)
                 }
                 placeholder="https://res.cloudinary.com/.../video/upload/..."
               />
@@ -314,7 +316,15 @@ export function CmsDepartmentView({
           icon={Bot}
           contentClassName="grid gap-4 md:grid-cols-2"
         >
-          <FieldBlock label="Assistant slug">
+          <FieldBlock
+            label="Assistant slug"
+            hint={
+              !department.integration.assistantSlug
+                ? "Thiếu Assistant slug."
+                : undefined
+            }
+            isError={!department.integration.assistantSlug}
+          >
             <Input
               value={department.integration.assistantSlug}
               onChange={(event) =>
@@ -371,26 +381,18 @@ export function CmsDepartmentView({
             />
           </FieldBlock>
 
-          <FieldBlock label="User prefix">
-            <Input
-              value={department.integration.partnerUserPrefix}
-              onChange={(event) =>
-                onUpdateIntegration("partnerUserPrefix", event.target.value)
-              }
-              className={cmsInputClass}
-            />
-          </FieldBlock>
+
 
           <FieldBlock label="Auto clear chat (phút)" hint="Reset trò chuyện nếu không có tin nhắn mới.">
             <Input
               type="number"
               min={1}
               max={60}
-              value={department.theme.inactivityTimeoutMinutes ?? 5}
+              value={department.inactivityTimeoutMinutes ?? 5}
               onChange={(event) =>
-                onUpdateTheme(
+                onUpdateDepartment(
                   "inactivityTimeoutMinutes",
-                  event.target.value
+                  Number(event.target.value) || 5,
                 )
               }
               className={cmsInputClass}
