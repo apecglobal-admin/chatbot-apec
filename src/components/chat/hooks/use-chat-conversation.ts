@@ -131,17 +131,7 @@ export function useChatConversation({
         const decoder = new TextDecoder()
         let fullContent = ""
         let buffer = "" // Buffer for incomplete lines across chunk boundaries
-
-        // Add an empty assistant message that we'll update as chunks arrive
-        setMessages((current) => [
-          ...current,
-          {
-            id: assistantMessageId,
-            role: "assistant",
-            content: "",
-            timestamp: formatChatTimestamp(),
-          },
-        ])
+        let assistantMessageAdded = false // Only add message bubble on first chunk
 
         while (true) {
           const { done, value } = await reader.read()
@@ -186,14 +176,28 @@ export function useChatConversation({
                 // Stream audio chunk piece immediately
                 onAssistantChunk?.(data.chunk)
 
-                // Update the assistant message in-place
-                setMessages((current) =>
-                  current.map((msg) =>
-                    msg.id === assistantMessageId
-                      ? { ...msg, content: fullContent }
-                      : msg,
-                  ),
-                )
+                if (!assistantMessageAdded) {
+                  // Add the assistant bubble on the first chunk
+                  assistantMessageAdded = true
+                  setMessages((current) => [
+                    ...current,
+                    {
+                      id: assistantMessageId,
+                      role: "assistant",
+                      content: fullContent,
+                      timestamp: formatChatTimestamp(),
+                    },
+                  ])
+                } else {
+                  // Update the assistant message in-place
+                  setMessages((current) =>
+                    current.map((msg) =>
+                      msg.id === assistantMessageId
+                        ? { ...msg, content: fullContent }
+                        : msg,
+                    ),
+                  )
+                }
               }
 
               // When done, finalize conversation metadata
