@@ -6,6 +6,7 @@ import type { DepartmentConfig } from "@/lib/cms-types"
 
 import type { ChatThreadMessage } from "../types"
 import { createWelcomeMessage, formatChatTimestamp } from "../utils"
+import { generateTimestampId } from "@/lib/utils"
 
 interface UseChatConversationOptions {
   department: DepartmentConfig
@@ -13,14 +14,6 @@ interface UseChatConversationOptions {
   onAssistantMessage?: (text: string) => void
   onAssistantChunk?: (chunk: string) => void
 }
-
-const generateId = () => {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID()
-  }
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-}
-
 
 export function useChatConversation({
   department,
@@ -116,10 +109,10 @@ export function useChatConversation({
   }, [department.slug])
 
   useEffect(() => {
-    const storageKey = `apec-user-${department.slug}`
+    const storageKey = `ecoop-${department.slug}`
     const currentUserId =
       window.localStorage.getItem(storageKey) ??
-      `${department.slug}-${generateId()}`
+      `${department.slug}-${generateTimestampId()}`
 
     window.localStorage.setItem(storageKey, currentUserId)
     setUserId(currentUserId)
@@ -134,13 +127,13 @@ export function useChatConversation({
       }
 
       const userMessage: ChatThreadMessage = {
-        id: generateId(),
+        id: `user-${generateTimestampId()}`,
         role: "user",
         content,
         timestamp: formatChatTimestamp(),
       }
 
-      const assistantMessageId = generateId()
+      const assistantMessageId = `asst-${generateTimestampId()}`
 
       setMessages((current) => [...current, userMessage])
       setErrorMessage("")
@@ -372,7 +365,7 @@ export function useChatConversation({
           return [
             ...filtered,
             {
-              id: generateId(),
+              id: `asst-${generateTimestampId()}`,
               role: "assistant" as const,
               content: fallbackResponse,
               timestamp: formatChatTimestamp(),
