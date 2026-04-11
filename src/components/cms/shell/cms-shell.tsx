@@ -23,11 +23,6 @@ const skipUpperCase = [
   "backgroundImageUrl",
   "botAvatarUrl",
   "headerLogoUrl",
-  "waitingIndicatorMode",
-  "waitingVideoUrl",
-  "waitingText",
-  "waitingTextSpeed",
-  "waitingCursorColor",
 ]
 
 function buildConfigWithThemeUpdate(
@@ -169,12 +164,56 @@ export function CmsShell({ initialConfig }: CmsShellProps) {
     setConfig((current) => buildConfigWithThemeUpdate(current, index, field, value))
   }
 
+  function updateWaitingConfig(
+    index: number,
+    field: keyof DepartmentConfig["waitingConfig"],
+    value: string | number,
+  ) {
+    setConfig((current) => ({
+      ...current,
+      departments: current.departments.map((department, departmentIndex) =>
+        departmentIndex === index
+          ? {
+              ...department,
+              waitingConfig: {
+                ...department.waitingConfig,
+                [field]: value,
+              },
+            }
+          : department,
+      ),
+    }))
+  }
+
   async function uploadThemeMedia(
     index: number,
     field: keyof DepartmentConfig["theme"],
     value: string,
   ) {
     const nextConfig = buildConfigWithThemeUpdate(config, index, field, value)
+    setConfig(nextConfig)
+    await persistConfig(nextConfig, "Đã lưu media và cấu hình CMS.")
+  }
+
+  async function uploadWaitingMedia(
+    index: number,
+    field: keyof DepartmentConfig["waitingConfig"],
+    value: string,
+  ) {
+    const nextConfig = {
+      ...config,
+      departments: config.departments.map((department, departmentIndex) =>
+        departmentIndex === index
+          ? {
+              ...department,
+              waitingConfig: {
+                ...department.waitingConfig,
+                [field]: value,
+              },
+            }
+          : department,
+      ),
+    }
     setConfig(nextConfig)
     await persistConfig(nextConfig, "Đã lưu media và cấu hình CMS.")
   }
@@ -322,8 +361,14 @@ export function CmsShell({ initialConfig }: CmsShellProps) {
               onUpdateTheme={(field, value) =>
                 updateTheme(activeDepartmentIndex, field, value)
               }
+              onUpdateWaitingConfig={(field, value) =>
+                updateWaitingConfig(activeDepartmentIndex, field, value)
+              }
               onUploadThemeMedia={(field, value) =>
                 uploadThemeMedia(activeDepartmentIndex, field, value)
+              }
+              onUploadWaitingMedia={(field, value) =>
+                uploadWaitingMedia(activeDepartmentIndex, field, value)
               }
             />
           ) : null}

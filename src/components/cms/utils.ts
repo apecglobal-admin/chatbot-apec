@@ -25,17 +25,19 @@ export function emptyDepartment(index: number): DepartmentConfig {
       backgroundImageUrl: "",
       botAvatarUrl: "",
       headerLogoUrl: "",
-      waitingIndicatorMode: "text",
-      waitingVideoUrl: "",
+    },
+    waitingConfig: {
+      mode: "video",
+      videoUrl: "",
     },
     integration: {
       endpoint: "/api/external/chat-stream",
       apiKey: "",
       apiKeyConfigured: false,
-      partnerUserPrefix: "apec-shelf",
       requestTimeoutMs: 20000,
       assistantSlug: `assistant-${index}`,
     },
+    inactivityTimeoutMinutes: 5,
   }
 }
 

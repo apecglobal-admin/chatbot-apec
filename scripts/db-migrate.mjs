@@ -1,4 +1,4 @@
-﻿import { mkdir, readdir, readFile, writeFile } from "node:fs/promises"
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
 import process from "node:process"
 import { Client } from "pg"
@@ -33,7 +33,6 @@ const bootstrapMigrations = [
         assistant_slug text not null,
         api_endpoint text not null,
         api_key text not null default '',
-        partner_user_prefix text not null default 'apec-shelf',
         request_timeout_ms integer not null default 20000,
         display_order integer not null default 0,
         is_active boolean not null default true,
@@ -95,7 +94,6 @@ const bootstrapMigrations = [
         assistant_slug,
         api_endpoint,
         api_key,
-        partner_user_prefix,
         request_timeout_ms,
         display_order,
         is_active
@@ -111,10 +109,9 @@ const bootstrapMigrations = [
           'Ví dụ: Cá hồi hôm nay còn không? Bảo quản thịt bò thế nào?',
           '["Cá hồi hôm nay còn không?","Rau nào hợp để nấu canh chua?","Bảo quản thịt bò trong ngăn mát bao lâu?"]'::jsonb,
           '{"accent":"#2F855A","accentSoft":"#D7F5E4","panel":"#F4FAF6","surface":"#FFFFFF","userBubble":"#2F855A","assistantBubble":"#E8F4EC","badge":"#163E2D"}'::jsonb,
-          'fresh-food',
-          'https://rag-ai-jn9g.onrender.com/api/external/chat',
           '',
-          'apec-shelf',
+          '/api/external/chat-stream',
+          '',
           20000,
           0,
           true
@@ -129,10 +126,9 @@ const bootstrapMigrations = [
           'Ví dụ: Có nước ép ít đường không? Cà phê nào bán chạy?',
           '["Có loại nước ép ít đường nào?","Cà phê lon nào bán chạy?","Gợi ý combo nước cho tiệc 10 người."]'::jsonb,
           '{"accent":"#D97706","accentSoft":"#FFE6C7","panel":"#FFF8F0","surface":"#FFFFFF","userBubble":"#D97706","assistantBubble":"#FFF0DB","badge":"#7C2D12"}'::jsonb,
-          'beverage',
-          'https://rag-ai-jn9g.onrender.com/api/external/chat',
           '',
-          'apec-shelf',
+          '/api/external/chat-stream',
+          '',
           20000,
           1,
           true
@@ -147,10 +143,9 @@ const bootstrapMigrations = [
           'Ví dụ: Có hộp đựng thực phẩm chịu nhiệt không?',
           '["Có hộp đựng thực phẩm chịu nhiệt không?","Chảo chống dính nào phù hợp bếp từ?","Gợi ý bộ đồ lau dọn căn hộ nhỏ."]'::jsonb,
           '{"accent":"#0F766E","accentSoft":"#D6F5F1","panel":"#F2FBFA","surface":"#FFFFFF","userBubble":"#0F766E","assistantBubble":"#E1F6F3","badge":"#134E4A"}'::jsonb,
-          'homeware',
-          'https://rag-ai-jn9g.onrender.com/api/external/chat',
           '',
-          'apec-shelf',
+          '/api/external/chat-stream',
+          '',
           20000,
           2,
           true
@@ -165,10 +160,9 @@ const bootstrapMigrations = [
           'Ví dụ: Da dầu nên chọn sữa rửa mặt nào?',
           '["Da dầu nên chọn sữa rửa mặt nào?","Có kem chống nắng cho da nhạy cảm không?","Gợi ý combo quà tặng chăm sóc da."]'::jsonb,
           '{"accent":"#BE185D","accentSoft":"#FFD7E8","panel":"#FFF3F8","surface":"#FFFFFF","userBubble":"#BE185D","assistantBubble":"#FFE3EF","badge":"#831843"}'::jsonb,
-          'beauty',
-          'https://rag-ai-jn9g.onrender.com/api/external/chat',
           '',
-          'apec-shelf',
+          '/api/external/chat-stream',
+          '',
           20000,
           3,
           true
@@ -185,7 +179,6 @@ const bootstrapMigrations = [
         theme = excluded.theme,
         assistant_slug = excluded.assistant_slug,
         api_endpoint = excluded.api_endpoint,
-        partner_user_prefix = excluded.partner_user_prefix,
         request_timeout_ms = excluded.request_timeout_ms,
         display_order = excluded.display_order,
         is_active = excluded.is_active;

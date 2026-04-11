@@ -13,19 +13,20 @@ export interface DepartmentTheme {
   backgroundImageUrl?: string
   botAvatarUrl?: string
   headerLogoUrl?: string
-  waitingIndicatorMode?: WaitingIndicatorMode
-  waitingVideoUrl?: string
-  waitingText?: string
-  waitingTextSpeed?: number
-  waitingCursorColor?: string
-  inactivityTimeoutMinutes?: number
+}
+
+export interface DepartmentWaitingConfig {
+  mode: WaitingIndicatorMode
+  videoUrl?: string
+  text?: string
+  textSpeed?: number
+  cursorColor?: string
 }
 
 export interface DepartmentIntegration {
   endpoint: string
   apiKey: string
   apiKeyConfigured: boolean
-  partnerUserPrefix: string
   requestTimeoutMs: number
   assistantSlug: string
 }
@@ -40,7 +41,9 @@ export interface DepartmentConfig {
   placeholder: string
   suggestedPrompts: string[]
   theme: DepartmentTheme
+  waitingConfig: DepartmentWaitingConfig
   integration: DepartmentIntegration
+  inactivityTimeoutMinutes?: number
 }
 
 export interface CmsConfig {
