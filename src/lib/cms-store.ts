@@ -43,7 +43,7 @@ const departmentIntegrationSchema = z.object({
   apiKey: z.string(),
   apiKeyConfigured: z.boolean(),
   requestTimeoutMs: z.number().int().min(3000).max(60000),
-  assistantSlug: z.string().min(1),
+  assistantSlug: z.string(),
 })
 
 const departmentSchema = z.object({
@@ -65,6 +65,7 @@ const departmentSchema = z.object({
   waitingConfig: departmentWaitingConfigSchema,
   integration: departmentIntegrationSchema,
   inactivityTimeoutMinutes: z.coerce.number().int().min(1).max(60).optional(),
+  updatedAt: z.string().optional(),
 })
 
 const cmsConfigSchema = z
@@ -368,7 +369,7 @@ function mapIntegrationRow(
 
   return {
     endpoint: row.api_endpoint,
-    apiKey: includeSecrets ? decryptedKey : "",
+    apiKey: includeSecrets ? decryptedKey : (row.api_key_encrypted ? "******" : ""),
     apiKeyConfigured: Boolean(row.api_key_encrypted),
     requestTimeoutMs: row.request_timeout_ms,
     assistantSlug: row.assistant_slug,
@@ -398,6 +399,7 @@ function mapDepartmentRow(
     waitingConfig: mapWaitingConfigRow(waitingConfigRow),
     integration: mapIntegrationRow(integrationRow, includeSecrets),
     inactivityTimeoutMinutes: row.inactivity_timeout_minutes ?? 5,
+    updatedAt: row.updated_at,
   }
 }
 
@@ -408,8 +410,13 @@ function sanitizeConfig(
   return {
     ...input,
     departments: input.departments.map((department) => {
-      const nextApiKey =
-        department.integration.apiKey.trim() || existingSecrets.get(department.id) || ""
+      // Sentinel "******" means user did not change the key → keep existing.
+      // Any other value (including empty string) is treated as the new key.
+      const SENTINEL = "******"
+      const rawKey = department.integration.apiKey
+      const nextApiKey = rawKey === SENTINEL
+        ? existingSecrets.get(department.id) ?? ""
+        : rawKey.trim()
 
       return {
         ...department,
@@ -452,6 +459,7 @@ function sanitizeConfig(
           assistantSlug: department.integration.assistantSlug.trim(),
         },
         inactivityTimeoutMinutes: department.inactivityTimeoutMinutes || 5,
+        updatedAt: department.updatedAt,
       }
     }),
     updatedAt: new Date().toISOString(),
@@ -660,6 +668,134 @@ export async function saveCmsConfig(input: CmsConfig) {
     if (deleteError) {
       throw new Error(deleteError.message)
     }
+  }
+
+  return getCmsConfig()
+}
+
+export async function saveDepartment(department: DepartmentConfig) {
+  const supabase = getSupabaseAdmin() as any
+  const existingConfig = await getCmsConfig({ includeSecrets: true }).catch(() => null)
+  const existingSecrets = new Map(
+    existingConfig?.departments.map((d) => [d.id, d.integration.apiKey]) ?? [],
+  )
+
+  const sanitized = sanitizeConfig(
+    { departments: [department], updatedAt: new Date().toISOString() },
+    existingSecrets,
+  )
+
+  const parsed = cmsConfigSchema.safeParse(sanitized)
+
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? "Dữ liệu CMS không hợp lệ.")
+  }
+
+  const sanitizedDepartment = parsed.data.departments[0]
+
+  let displayOrder = 0
+  const { data: existingRows } = await supabase.from("departments").select("id, display_order")
+  
+  if (existingRows) {
+    const me = existingRows.find((r: any) => r.id === sanitizedDepartment.id)
+    if (me) {
+      displayOrder = me.display_order
+    } else {
+      const maxOrder = Math.max(-1, ...existingRows.map((r: any) => r.display_order))
+      displayOrder = maxOrder + 1
+    }
+  }
+
+  // 1. Upsert department
+  const departmentPayload = {
+    id: sanitizedDepartment.id,
+    slug: sanitizedDepartment.slug,
+    name: sanitizedDepartment.name,
+    zone_label: sanitizedDepartment.zoneLabel,
+    description: sanitizedDepartment.description,
+    welcome_message: sanitizedDepartment.welcomeMessage,
+    placeholder: sanitizedDepartment.placeholder,
+    suggested_prompts: sanitizedDepartment.suggestedPrompts,
+    display_order: displayOrder,
+    is_active: true,
+    inactivity_timeout_minutes: sanitizedDepartment.inactivityTimeoutMinutes ?? 5,
+    updated_at: parsed.data.updatedAt,
+  }
+
+  const { error: upsertError } = await supabase
+    .from("departments")
+    .upsert(departmentPayload, { onConflict: "id" })
+
+  if (upsertError) throw new Error(upsertError.message)
+
+  // 2. Upsert theme
+  const themePayload = {
+    department_id: sanitizedDepartment.id,
+    accent: sanitizedDepartment.theme.accent,
+    accent_soft: sanitizedDepartment.theme.accentSoft,
+    panel: sanitizedDepartment.theme.panel,
+    surface: sanitizedDepartment.theme.surface,
+    user_bubble: sanitizedDepartment.theme.userBubble,
+    assistant_bubble: sanitizedDepartment.theme.assistantBubble,
+    badge: sanitizedDepartment.theme.badge,
+    suggested_prompts_bg_color: sanitizedDepartment.theme.suggestedPromptsBgColor || "",
+    suggested_prompts_text_color: sanitizedDepartment.theme.suggestedPromptsTextColor || "",
+    background_image_url: sanitizedDepartment.theme.backgroundImageUrl || "",
+    bot_avatar_url: sanitizedDepartment.theme.botAvatarUrl || "",
+    header_logo_url: sanitizedDepartment.theme.headerLogoUrl || "",
+  }
+
+  const { error: themeError } = await supabase
+    .from("department_themes")
+    .upsert(themePayload, { onConflict: "department_id" })
+
+  if (themeError) throw new Error(themeError.message)
+
+  // 3. Upsert integrations
+  const integrationPayload = {
+    department_id: sanitizedDepartment.id,
+    api_endpoint: sanitizedDepartment.integration.endpoint,
+    api_key_encrypted: sanitizedDepartment.integration.apiKey
+      ? encrypt(sanitizedDepartment.integration.apiKey)
+      : "",
+    request_timeout_ms: sanitizedDepartment.integration.requestTimeoutMs,
+    assistant_slug: sanitizedDepartment.integration.assistantSlug,
+  }
+
+  const { error: integrationError } = await supabase
+    .from("department_integrations")
+    .upsert(integrationPayload, { onConflict: "department_id" })
+
+  if (integrationError) throw new Error(integrationError.message)
+
+  // 4. Upsert waiting configs
+  const waitingPayload = {
+    department_id: sanitizedDepartment.id,
+    mode: sanitizedDepartment.waitingConfig.mode,
+    video_url: sanitizedDepartment.waitingConfig.videoUrl || "",
+    text_content: sanitizedDepartment.waitingConfig.text || "",
+    text_speed: sanitizedDepartment.waitingConfig.textSpeed || 60,
+    cursor_color: sanitizedDepartment.waitingConfig.cursorColor || "",
+  }
+
+  const { error: waitingError } = await supabase
+    .from("department_waiting_configs")
+    .upsert(waitingPayload, { onConflict: "department_id" })
+
+  if (waitingError) throw new Error(waitingError.message)
+
+  return getCmsConfig()
+}
+
+export async function deleteDepartment(id: string) {
+  const supabase = getSupabaseAdmin() as any
+  const { error: deleteError } = await supabase
+    .from("departments")
+    .delete()
+    .eq("id", id)
+
+  if (deleteError) {
+    throw new Error(deleteError.message)
   }
 
   return getCmsConfig()

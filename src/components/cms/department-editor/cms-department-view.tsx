@@ -24,6 +24,7 @@ import { FieldBlock } from "./field-block"
 import { themeFields } from "./theme-fields"
 
 interface CmsDepartmentViewProps {
+  headerNode?: React.ReactNode
   department: DepartmentConfig
   onUpdateDepartment: <K extends keyof DepartmentConfig>(
     field: K,
@@ -52,6 +53,7 @@ interface CmsDepartmentViewProps {
 }
 
 export function CmsDepartmentView({
+  headerNode,
   department,
   onUpdateDepartment,
   onUpdateIntegration,
@@ -64,8 +66,10 @@ export function CmsDepartmentView({
     department.waitingConfig.mode === "text" ? "text" : "video"
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="space-y-4">
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px] items-start min-w-0">
+      <div className="flex flex-col gap-4 min-w-0">
+        {headerNode}
+        
         <SectionCard
           title="Nội dung chính"
           description="Phần định danh và nội dung hội thoại cốt lõi."
@@ -132,26 +136,23 @@ export function CmsDepartmentView({
               onChange={(event) =>
                 onUpdateDepartment(
                   "suggestedPrompts",
-                  event.target.value
-                    .split("\n")
-                    .map((prompt) => prompt.trim())
-                    .filter(Boolean),
+                  event.target.value.split("\n")
                 )
               }
-              className={`${cmsTextareaClass} min-h-[130px]`}
+              className={`${cmsTextareaClass} min-h-[100px]`}
             />
           </FieldBlock>
         </SectionCard>
 
         <SectionCard
           title="Hiển thị khi chờ"
-          description="Cấu hình text typewriter hoặc video trong lúc AI đang trả lời."
+          description="Cấu hình text typewriter hoặc video trong lúc đang chờ AI trả lời."
           icon={Settings2}
           contentClassName="grid gap-4 md:grid-cols-2"
         >
           <FieldBlock
             label="Hiển thị khi chờ"
-            hint="Chọn text typewriter hoặc video trong lúc AI đang trả lời."
+            hint="Chọn text typewriter hoặc video trong lúc đang chờ AI trả lời."
           >
             <Select
               value={waitingIndicatorMode}
@@ -294,7 +295,7 @@ export function CmsDepartmentView({
                 placeholder="https://example.com/avatar.jpg"
               />
             </FieldBlock>
-            <FieldBlock
+            {/* <FieldBlock
               label="Logo trợ lý"
               hint="Dán URL hoặc upload trực tiếp lên Cloudinary."
             >
@@ -306,7 +307,7 @@ export function CmsDepartmentView({
                 onUploadComplete={(value) => onUploadThemeMedia("headerLogoUrl", value)}
                 placeholder="https://example.com/logo.jpg"
               />
-            </FieldBlock>
+            </FieldBlock> */}
           </div>
         </SectionCard>
 
@@ -330,6 +331,7 @@ export function CmsDepartmentView({
               onChange={(event) =>
                 onUpdateIntegration("assistantSlug", event.target.value)
               }
+              placeholder="slug"
               className={cmsInputClass}
             />
           </FieldBlock>
@@ -338,8 +340,8 @@ export function CmsDepartmentView({
             label="API key"
             hint={
               department.integration.apiKeyConfigured
-                ? "Để trống nếu giữ key hiện tại."
-                : "Thiếu API key."
+                ? "Sửa trực tiếp để đổi key, xóa trắng để gỡ bỏ."
+                : "Chưa có API key."
             }
             className="md:col-span-2"
             isError={!department.integration.apiKeyConfigured}
@@ -349,11 +351,7 @@ export function CmsDepartmentView({
               value={department.integration.apiKey}
               onChange={(event) => onUpdateIntegration("apiKey", event.target.value)}
               className={cmsInputClass}
-              placeholder={
-                department.integration.apiKeyConfigured
-                  ? "******"
-                  : "Nhập API key"
-              }
+              placeholder="Nhập API key"
             />
           </FieldBlock>
 
@@ -365,7 +363,7 @@ export function CmsDepartmentView({
             />
           </FieldBlock>
 
-          <FieldBlock label="Timeout request (ms)">
+          <FieldBlock label="Timeout request (ms)" hint="Thời gian tối đa chờ phản hồi từ AI">
             <Input
               type="number"
               min={3000}
@@ -399,7 +397,7 @@ export function CmsDepartmentView({
             />
           </FieldBlock>
 
-          <div className="md:col-span-2 mt-2 pt-4 border-t border-slate-100">
+          <div className="md:col-span-2">
             <Button
               variant="default"
               className="w-full gap-2 rounded-2xl bg-indigo-600 font-semibold text-white shadow-lg shadow-indigo-200 transition-all hover:bg-indigo-700 hover:shadow-indigo-300 active:scale-[0.98]"
