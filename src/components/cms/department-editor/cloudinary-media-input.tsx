@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { Loader2, Save, Upload, UploadIcon } from "lucide-react";
+import { Loader2, Save, Upload, UploadIcon, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,10 +102,24 @@ export function CloudinaryMediaInput({
         <Input
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className={cn(cmsInputClass, "pr-[5.5rem]")}
+          className={cn(cmsInputClass, "pr-[7.5rem]")}
           placeholder={placeholder}
         />
         <div className="absolute inset-y-0 right-2 flex items-center gap-1">
+          {value ? (
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => onChange("")}
+              className="h-8 w-8 rounded-full text-rose-400 hover:bg-rose-50 hover:text-rose-600"
+              title="Xóa giá trị"
+              aria-label="Xóa giá trị"
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Xóa giá trị</span>
+            </Button>
+          ) : null}
           <Button
             type="button"
             size="icon"
@@ -182,11 +196,24 @@ export function CloudinaryMediaInput({
           ) : null}
           <div className="min-w-0 flex-1 space-y-2">
             {selectedFile ? (
-              <div className="flex min-w-0 items-center gap-2">
-                <Upload className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                <span className="min-w-0 truncate text-xs text-slate-500">
-                  {fileLabel}
-                </span>
+              <div className="flex min-w-0 items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <Upload className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                  <span className="min-w-0 truncate text-xs text-slate-500">
+                    {fileLabel}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedFile(null);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                  className="rounded-full p-0.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                  title="Hủy chọn file"
+                >
+                  <X className="h-3 w-3" />
+                </button>
               </div>
             ) : null}
 
