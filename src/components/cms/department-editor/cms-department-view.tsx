@@ -1,6 +1,6 @@
-import { Bot, ExternalLink, Palette, Settings2 } from "lucide-react"
+import { Bot, ExternalLink, Palette, Settings2, X } from "lucide-react"
 
-
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -346,13 +346,25 @@ export function CmsDepartmentView({
             className="md:col-span-2"
             isError={!department.integration.apiKeyConfigured}
           >
-            <Input
-              type="password"
-              value={department.integration.apiKey}
-              onChange={(event) => onUpdateIntegration("apiKey", event.target.value)}
-              className={cmsInputClass}
-              placeholder="Nhập API key"
-            />
+            <div className="relative">
+              <Input
+                type="password"
+                value={department.integration.apiKey}
+                onChange={(event) => onUpdateIntegration("apiKey", event.target.value)}
+                className={cn(cmsInputClass, department.integration.apiKey && "pr-10")}
+                placeholder="Nhập API key"
+              />
+              {department.integration.apiKey ? (
+                <button
+                  type="button"
+                  onClick={() => onUpdateIntegration("apiKey", "")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                  title="Xóa API key"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              ) : null}
+            </div>
           </FieldBlock>
 
           <FieldBlock label="Endpoint" className="md:col-span-2">
