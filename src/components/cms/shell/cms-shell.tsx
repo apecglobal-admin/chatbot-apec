@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { KeyRound, Trash2 } from "lucide-react"
+import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -51,8 +52,6 @@ export function CmsShell({ initialConfig }: CmsShellProps) {
   const [config, setConfig] = useState(initialConfig)
   const [savedSnapshot, setSavedSnapshot] = useState(JSON.stringify(initialConfig))
   const [isSaving, setIsSaving] = useState(false)
-  const [statusMessage, setStatusMessage] = useState("")
-  const [errorMessage, setErrorMessage] = useState("")
   const [activeView, setActiveView] = useState<CmsView>("dashboard")
   const [activeDepartmentIndex, setActiveDepartmentIndex] = useState(0)
 
@@ -97,16 +96,8 @@ export function CmsShell({ initialConfig }: CmsShellProps) {
     }
   }, [activeDepartmentIndex, config.departments.length])
 
-  useEffect(() => {
-    if (isDirty) {
-      setStatusMessage("")
-    }
-  }, [isDirty])
-
   async function saveSpecificDepartment(dept: DepartmentConfig, successMessage: string) {
     setIsSaving(true)
-    setStatusMessage("")
-    setErrorMessage("")
 
     try {
       const response = await fetch(`/api/departments/${dept.id}`, {
@@ -123,9 +114,10 @@ export function CmsShell({ initialConfig }: CmsShellProps) {
 
       setConfig(data.config)
       setSavedSnapshot(JSON.stringify(data.config))
-      setStatusMessage(successMessage)
+      toast.success(successMessage)
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Đã xảy ra lỗi khi lưu.")
+      const msg = error instanceof Error ? error.message : "Đã xảy ra lỗi khi lưu."
+      toast.error(msg)
       throw error
     } finally {
       setIsSaving(false)
@@ -277,8 +269,6 @@ export function CmsShell({ initialConfig }: CmsShellProps) {
 
     const newDept = emptyDepartment(config.departments.length + 1)
     setIsSaving(true)
-    setStatusMessage("")
-    setErrorMessage("")
 
     try {
       const response = await fetch("/api/departments", {
@@ -297,7 +287,7 @@ export function CmsShell({ initialConfig }: CmsShellProps) {
       setActiveDepartmentIndex(newIndex)
       setActiveView("department")
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Lỗi khi thêm ngành hàng.")
+      toast.error(error instanceof Error ? error.message : "Lỗi khi thêm ngành hàng.")
     } finally {
       setIsSaving(false)
     }
@@ -311,8 +301,6 @@ export function CmsShell({ initialConfig }: CmsShellProps) {
     const deptToRemove = config.departments[index]
     if (window.confirm(`Xóa vĩnh viễn ngành hàng ${deptToRemove.name}? Thao tác này không thể hoàn tác.`)) {
       setIsSaving(true)
-      setStatusMessage("")
-      setErrorMessage("")
       try {
         const response = await fetch(`/api/departments/${deptToRemove.id}`, { method: "DELETE" })
         const data = (await response.json()) as { config?: CmsConfig; error?: string }
@@ -329,7 +317,7 @@ export function CmsShell({ initialConfig }: CmsShellProps) {
           setActiveView("dashboard")
         }
       } catch (error) {
-        setErrorMessage(error instanceof Error ? error.message : "Lỗi xóa ngành hàng.")
+        toast.error(error instanceof Error ? error.message : "Lỗi xóa ngành hàng.")
       } finally {
         setIsSaving(false)
       }
@@ -414,8 +402,6 @@ export function CmsShell({ initialConfig }: CmsShellProps) {
             <CmsHeader
               title={currentViewTitle}
               updatedAt={config.updatedAt}
-              statusMessage={statusMessage}
-              errorMessage={errorMessage}
               isSaving={isSaving}
               isDirty={isDirty}
               onSave={() => void handleSave()}
@@ -441,8 +427,6 @@ export function CmsShell({ initialConfig }: CmsShellProps) {
                   title={currentViewTitle}
                   titleColor={activeDepartment.theme.accent}
                   updatedAt={(activeView === "department" && activeDepartment?.updatedAt) ? activeDepartment.updatedAt : config.updatedAt}
-                  statusMessage={statusMessage}
-                  errorMessage={errorMessage}
                   isSaving={isSaving}
                   isDirty={isDirty}
                   onSave={() => void handleSave()}

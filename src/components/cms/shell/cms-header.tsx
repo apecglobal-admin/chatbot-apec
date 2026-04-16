@@ -12,8 +12,6 @@ interface CmsHeaderProps {
   title: string
   titleColor?: string
   updatedAt: string
-  statusMessage: string
-  errorMessage: string
   isSaving: boolean
   isDirty: boolean
   onSave: () => void
@@ -26,8 +24,6 @@ export function CmsHeader({
   title,
   titleColor,
   updatedAt,
-  statusMessage,
-  errorMessage,
   isSaving,
   isDirty,
   onSave,
@@ -35,17 +31,6 @@ export function CmsHeader({
   action,
   variant = "default",
 }: CmsHeaderProps) {
-  useEffect(() => {
-    if (statusMessage) {
-      toast.success(statusMessage)
-    }
-  }, [statusMessage])
-
-  useEffect(() => {
-    if (errorMessage) {
-      toast.error(errorMessage)
-    }
-  }, [errorMessage])
 
   const saveLabel = isSaving ? "Đang lưu..." : isDirty ? "Lưu thay đổi" : "Không có thay đổi"
 

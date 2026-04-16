@@ -331,6 +331,7 @@ export function CmsDepartmentView({
               onChange={(event) =>
                 onUpdateIntegration("assistantSlug", event.target.value)
               }
+              placeholder="slug"
               className={cmsInputClass}
             />
           </FieldBlock>
@@ -339,8 +340,8 @@ export function CmsDepartmentView({
             label="API key"
             hint={
               department.integration.apiKeyConfigured
-                ? "Để trống nếu giữ key hiện tại."
-                : "Thiếu API key."
+                ? "Sửa trực tiếp để đổi key, xóa trắng để gỡ bỏ."
+                : "Chưa có API key."
             }
             className="md:col-span-2"
             isError={!department.integration.apiKeyConfigured}
@@ -350,11 +351,7 @@ export function CmsDepartmentView({
               value={department.integration.apiKey}
               onChange={(event) => onUpdateIntegration("apiKey", event.target.value)}
               className={cmsInputClass}
-              placeholder={
-                department.integration.apiKeyConfigured
-                  ? "******"
-                  : "Nhập API key"
-              }
+              placeholder="Nhập API key"
             />
           </FieldBlock>
 
@@ -366,7 +363,7 @@ export function CmsDepartmentView({
             />
           </FieldBlock>
 
-          <FieldBlock label="Timeout request (ms)">
+          <FieldBlock label="Timeout request (ms)" hint="Thời gian tối đa chờ phản hồi từ AI">
             <Input
               type="number"
               min={3000}
@@ -400,7 +397,7 @@ export function CmsDepartmentView({
             />
           </FieldBlock>
 
-          <div className="md:col-span-2 mt-2 pt-4 border-t border-slate-100">
+          <div className="md:col-span-2">
             <Button
               variant="default"
               className="w-full gap-2 rounded-2xl bg-indigo-600 font-semibold text-white shadow-lg shadow-indigo-200 transition-all hover:bg-indigo-700 hover:shadow-indigo-300 active:scale-[0.98]"

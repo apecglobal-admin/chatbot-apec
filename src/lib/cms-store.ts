@@ -43,7 +43,7 @@ const departmentIntegrationSchema = z.object({
   apiKey: z.string(),
   apiKeyConfigured: z.boolean(),
   requestTimeoutMs: z.number().int().min(3000).max(60000),
-  assistantSlug: z.string().min(1),
+  assistantSlug: z.string(),
 })
 
 const departmentSchema = z.object({
@@ -369,7 +369,7 @@ function mapIntegrationRow(
 
   return {
     endpoint: row.api_endpoint,
-    apiKey: includeSecrets ? decryptedKey : "",
+    apiKey: includeSecrets ? decryptedKey : (row.api_key_encrypted ? "******" : ""),
     apiKeyConfigured: Boolean(row.api_key_encrypted),
     requestTimeoutMs: row.request_timeout_ms,
     assistantSlug: row.assistant_slug,
@@ -410,8 +410,13 @@ function sanitizeConfig(
   return {
     ...input,
     departments: input.departments.map((department) => {
-      const nextApiKey =
-        department.integration.apiKey.trim() || existingSecrets.get(department.id) || ""
+      // Sentinel "******" means user did not change the key → keep existing.
+      // Any other value (including empty string) is treated as the new key.
+      const SENTINEL = "******"
+      const rawKey = department.integration.apiKey
+      const nextApiKey = rawKey === SENTINEL
+        ? existingSecrets.get(department.id) ?? ""
+        : rawKey.trim()
 
       return {
         ...department,
