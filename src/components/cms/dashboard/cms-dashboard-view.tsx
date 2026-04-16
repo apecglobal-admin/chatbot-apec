@@ -92,7 +92,7 @@ export function CmsDashboardView({
           icon={Workflow}
         >
           <div className="overflow-hidden rounded-[18px] border border-slate-200">
-            <div className="grid grid-cols-[minmax(0,1.5fr)_120px_140px_110px] gap-3 border-b border-slate-200 bg-slate-100 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <div className="grid grid-cols-[minmax(0,3fr)_100px_100px_70px] gap-3 border-b border-slate-200 bg-slate-100 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
               <span>Ngành hàng</span>
               <span>Vị trí</span>
               <span>API key</span>
@@ -104,7 +104,7 @@ export function CmsDashboardView({
                   key={`${department.id}-${index}-row`}
                   type="button"
                   onClick={() => onOpenDepartment(index)}
-                  className="grid w-full grid-cols-[minmax(0,1.5fr)_120px_140px_110px] gap-3 px-4 py-3 text-left transition hover:bg-slate-50"
+                  className="grid w-full grid-cols-[minmax(0,3fr)_100px_100px_70px] gap-3 px-4 py-3 text-left transition hover:bg-slate-50"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-slate-950">{department.name}</p>

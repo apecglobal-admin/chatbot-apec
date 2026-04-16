@@ -44,6 +44,7 @@ export interface DepartmentConfig {
   waitingConfig: DepartmentWaitingConfig
   integration: DepartmentIntegration
   inactivityTimeoutMinutes?: number
+  updatedAt?: string
 }
 
 export interface CmsConfig {

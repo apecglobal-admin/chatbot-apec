@@ -30,17 +30,17 @@ export function SectionCard({
         className,
       )}
     >
-      <CardHeader className="border-b border-slate-200 px-4 py-3 md:px-5 bg-emerald-700">
+      <CardHeader className="relative px-4 py-3 md:px-5 bg-gradient-to-tr from-emerald-300/90 via-white to-orange-300/90">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3 ">
             <div className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700">
               <Icon className="h-4 w-4" />
             </div>
             <div className="space-y-1">
-              <CardTitle className="text-base font-bold tracking-tight text-white">
+              <CardTitle className="text-base font-bold tracking-tight text-slate-900">
                 {title}
               </CardTitle>
-              <CardDescription className="max-w-3xl text-sm leading-5 text-slate-200">
+              <CardDescription className="max-w-3xl text-sm leading-5 text-slate-700">
                 {description}
               </CardDescription>
             </div>

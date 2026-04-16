@@ -1,14 +1,16 @@
-import { type ReactNode } from "react"
+import { useEffect, type ReactNode } from "react"
 import { Clock3, Save } from "lucide-react"
+import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 import { formatDateTime } from "../utils"
 
 interface CmsHeaderProps {
   title: string
-  description: string
+  titleColor?: string
   updatedAt: string
   statusMessage: string
   errorMessage: string
@@ -22,7 +24,7 @@ interface CmsHeaderProps {
 
 export function CmsHeader({
   title,
-  description,
+  titleColor,
   updatedAt,
   statusMessage,
   errorMessage,
@@ -33,54 +35,58 @@ export function CmsHeader({
   action,
   variant = "default",
 }: CmsHeaderProps) {
-  const dirtyBadge = (
-    <Badge
-      className={`rounded-full px-3 py-1 ${
-        isDirty ? "bg-amber-500 text-white" : "bg-emerald-600 text-white"
-      }`}
-    >
-      {isDirty ? "Có thay đổi chưa lưu" : "Đang đồng bộ"}
-    </Badge>
-  )
+  useEffect(() => {
+    if (statusMessage) {
+      toast.success(statusMessage)
+    }
+  }, [statusMessage])
+
+  useEffect(() => {
+    if (errorMessage) {
+      toast.error(errorMessage)
+    }
+  }, [errorMessage])
 
   const saveLabel = isSaving ? "Đang lưu..." : isDirty ? "Lưu thay đổi" : "Không có thay đổi"
 
   return (
-    <header className="space-y-3">
+    <header className={cn("space-y-3", variant === "compact" && "sticky top-4 z-40")}>
       {variant === "compact" ? (
-        <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[0_12px_36px_rgba(15,23,42,0.06)] md:px-5">
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-              <div className="flex flex-wrap items-center gap-2">
-                {dirtyBadge}
-                {meta}
+        <div className="group relative p-[1px] rounded-[1.25rem] bg-gradient-to-tr from-orange-400/40 via-slate-200/50 to-emerald-400/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all">
+          <div className="rounded-[calc(1.25rem-1px)] bg-white/80 backdrop-blur-xl px-4 py-3 md:px-5">
+            <div className="flex flex-col gap-2.5">
+              {/* Hàng 1: Các status và update_at */}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-1.5">{meta}</div>
+                <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+                  <Clock3 className="h-3.5 w-3.5" />
+                  <span>Cập nhật: {formatDateTime(updatedAt)}</span>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2 text-sm text-slate-500">
-                <Clock3 className="h-4 w-4 shrink-0" />
-                <span className="whitespace-nowrap">Cập nhật: {formatDateTime(updatedAt)}</span>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-              <div className="min-w-0">
-                <h2 className="text-2xl font-semibold tracking-tight text-slate-950 md:text-3xl">
+              {/* Hàng 2: Name và các button */}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <h2
+                  className={cn(
+                    "text-xl font-bold tracking-tight truncate max-w-full sm:max-w-md",
+                    !titleColor && "text-slate-950"
+                  )}
+                  style={titleColor ? { color: titleColor } : undefined}
+                >
                   {title}
                 </h2>
-                <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">{description}</p>
-              </div>
-
-              <div className="flex flex-col gap-2 sm:flex-row xl:shrink-0">
-                {action}
-                <Button
-                  type="button"
-                  onClick={onSave}
-                  disabled={isSaving || !isDirty}
-                  className="h-11 min-w-55 rounded-full bg-slate-950 text-white hover:bg-slate-900"
-                >
-                  <Save className="h-4 w-4" />
-                  {saveLabel}
-                </Button>
+                <div className="flex items-center gap-2 shrink-0">
+                  {action}
+                  <Button
+                    type="button"
+                    onClick={onSave}
+                    disabled={isSaving || !isDirty}
+                    className="h-7 px-2.5 text-[11px] rounded-full bg-green-600 text-white hover:bg-green-700 shadow-sm transition-all"
+                  >
+                    <Save className="h-3 w-3" />
+                    {saveLabel}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -88,18 +94,6 @@ export function CmsHeader({
       ) : (
         <></>
       )}
-
-      {statusMessage ? (
-        <div className="rounded-[18px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          {statusMessage}
-        </div>
-      ) : null}
-
-      {errorMessage ? (
-        <div className="rounded-[18px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {errorMessage}
-        </div>
-      ) : null}
     </header>
   )
 }

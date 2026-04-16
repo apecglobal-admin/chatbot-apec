@@ -128,7 +128,7 @@ export function ChatMessage({
       <div className="flex flex-col gap-1.5">
         <div
           className={cn(
-            "rounded-3xl border px-4 py-3.5 shadow-[0_12px_32px_rgba(15,23,42,0.06)]",
+            "rounded-3xl border px-4 py-2 shadow-[0_12px_32px_rgba(15,23,42,0.06)]",
             isUser
               ? "rounded-br-md text-white"
               : "rounded-bl-md bg-white/92 text-slate-900",

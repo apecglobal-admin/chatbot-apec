@@ -1,25 +1,25 @@
-"use client"
+"use client";
 
-import { useCallback, useEffect, useRef, useState } from "react"
-import type { KeyboardEvent } from "react"
-import { RotateCcw, Send, VolumeX } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
+import { RotateCcw, Send, VolumeX } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { Textarea } from "@/components/ui/textarea"
-import type { DepartmentConfig, DepartmentTheme } from "@/lib/cms-types"
-import { hexToRgba } from "@/lib/color"
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import type { DepartmentConfig, DepartmentTheme } from "@/lib/cms-types";
+import { hexToRgba } from "@/lib/color";
 
-import { VoiceButton } from "../controls/voice-button"
-import { useChatConversation } from "../hooks/use-chat-conversation"
-import { useVoiceAssistant } from "../hooks/use-voice-assistant"
-import { BotAvatar } from "../shared/bot-avatar"
-import { WalkingRobot } from "../shared/walking-robot"
-import type { ChatThreadMessage } from "../types"
-import { FakeStreamingText } from "../waiting-response/fake-streaming-text"
-import { WaitingVideo } from "../waiting-response/waiting-video"
-import { ChatMessage } from "./chat-message"
+import { VoiceButton } from "../controls/voice-button";
+import { useChatConversation } from "../hooks/use-chat-conversation";
+import { useVoiceAssistant } from "../hooks/use-voice-assistant";
+import { BotAvatar } from "../shared/bot-avatar";
+import { WalkingRobot } from "../shared/walking-robot";
+import type { ChatThreadMessage } from "../types";
+import { FakeStreamingText } from "../waiting-response/fake-streaming-text";
+import { WaitingVideo } from "../waiting-response/waiting-video";
+import { ChatMessage } from "./chat-message";
 
 function ResetTimerBar({
   targetTimestamp,
@@ -28,37 +28,43 @@ function ResetTimerBar({
   theme,
   forceShowButton,
 }: {
-  targetTimestamp: number | null
-  durationSeconds: number
-  onClear: () => void
-  theme: DepartmentTheme
-  forceShowButton: boolean
+  targetTimestamp: number | null;
+  durationSeconds: number;
+  onClear: () => void;
+  theme: DepartmentTheme;
+  forceShowButton: boolean;
 }) {
   const [timeLeft, setTimeLeft] = useState(() =>
-    targetTimestamp ? Math.max(0, Math.floor((targetTimestamp - Date.now()) / 1000)) : 0,
-  )
+    targetTimestamp
+      ? Math.max(0, Math.floor((targetTimestamp - Date.now()) / 1000))
+      : 0,
+  );
 
   useEffect(() => {
     if (!targetTimestamp) {
-      return
+      return;
     }
 
-    setTimeLeft(Math.max(0, Math.floor((targetTimestamp - Date.now()) / 1000)))
+    setTimeLeft(Math.max(0, Math.floor((targetTimestamp - Date.now()) / 1000)));
 
     const handle = setInterval(() => {
-      setTimeLeft(Math.max(0, Math.floor((targetTimestamp - Date.now()) / 1000)))
-    }, 1000)
+      setTimeLeft(
+        Math.max(0, Math.floor((targetTimestamp - Date.now()) / 1000)),
+      );
+    }, 1000);
 
-    return () => clearInterval(handle)
-  }, [targetTimestamp])
+    return () => clearInterval(handle);
+  }, [targetTimestamp]);
 
   if (!targetTimestamp && !forceShowButton) {
-    return null
+    return null;
   }
 
-  const minutes = Math.floor(timeLeft / 60)
-  const seconds = String(timeLeft % 60).padStart(2, "0")
-  const progressPercent = targetTimestamp ? (timeLeft / durationSeconds) * 100 : 0
+  const minutes = Math.floor(timeLeft / 60);
+  const seconds = String(timeLeft % 60).padStart(2, "0");
+  const progressPercent = targetTimestamp
+    ? (timeLeft / durationSeconds) * 100
+    : 0;
 
   return (
     <div className="flex items-center gap-4 rounded-xl bg-black/15 px-4 py-2.5 shadow-inner backdrop-blur-sm">
@@ -71,7 +77,9 @@ function ResetTimerBar({
             <div className="h-1 w-full overflow-hidden rounded-full bg-white/20">
               <div
                 className="h-full rounded-full bg-white/90 transition-all duration-1000 ease-linear"
-                style={{ width: `${Math.min(100, Math.max(0, progressPercent))}%` }}
+                style={{
+                  width: `${Math.min(100, Math.max(0, progressPercent))}%`,
+                }}
               />
             </div>
           </div>
@@ -93,26 +101,26 @@ function ResetTimerBar({
         <span>Làm mới ngay</span>
       </button>
     </div>
-  )
+  );
 }
 
 interface ChatConversationProps {
-  department: DepartmentConfig
-  apiConfigured: boolean
+  department: DepartmentConfig;
+  apiConfigured: boolean;
 }
 
 export function ChatConversation({
   department,
   apiConfigured,
 }: ChatConversationProps) {
-  const [inputValue, setInputValue] = useState("")
-  const [ttsEnabled, setTtsEnabled] = useState(true)
-  const [autoClearTarget, setAutoClearTarget] = useState<number | null>(null)
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const [inputValue, setInputValue] = useState("");
+  const [ttsEnabled, setTtsEnabled] = useState(true);
+  const [autoClearTarget, setAutoClearTarget] = useState<number | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const appendTTSChunkRef = useRef<((chunk: string) => void) | null>(null)
-  const flushTTSRef = useRef<(() => void) | null>(null)
-  const ttsEnabledRef = useRef(ttsEnabled)
+  const appendTTSChunkRef = useRef<((chunk: string) => void) | null>(null);
+  const flushTTSRef = useRef<(() => void) | null>(null);
+  const ttsEnabledRef = useRef(ttsEnabled);
 
   const {
     clearConversation,
@@ -126,15 +134,15 @@ export function ChatConversation({
     apiConfigured,
     onAssistantChunk: (chunk) => {
       if (ttsEnabledRef.current) {
-        appendTTSChunkRef.current?.(chunk)
+        appendTTSChunkRef.current?.(chunk);
       }
     },
     onAssistantMessage: () => {
       if (ttsEnabledRef.current) {
-        flushTTSRef.current?.()
+        flushTTSRef.current?.();
       }
     },
-  })
+  });
 
   const {
     isListening,
@@ -149,87 +157,95 @@ export function ChatConversation({
   } = useVoiceAssistant({
     onTranscriptChange: setInputValue,
     onTranscriptComplete: (text) => {
-      setInputValue("")
-      void sendMessage(text)
+      setInputValue("");
+      void sendMessage(text);
     },
     currentTranscript: inputValue,
-  })
+  });
 
   useEffect(() => {
-    appendTTSChunkRef.current = appendTTSChunk
-    flushTTSRef.current = flushTTS
-  }, [appendTTSChunk, flushTTS])
+    appendTTSChunkRef.current = appendTTSChunk;
+    flushTTSRef.current = flushTTS;
+  }, [appendTTSChunk, flushTTS]);
 
   useEffect(() => {
-    ttsEnabledRef.current = ttsEnabled
-  }, [ttsEnabled])
+    ttsEnabledRef.current = ttsEnabled;
+  }, [ttsEnabled]);
 
   useEffect(() => {
-    const container = scrollRef.current
+    const container = scrollRef.current;
 
     if (container) {
-      container.scrollTop = container.scrollHeight
+      container.scrollTop = container.scrollHeight;
     }
-  }, [inputValue, isListening, isSubmitting, messages])
+  }, [inputValue, isListening, isSubmitting, messages]);
 
   useEffect(() => {
-    setInputValue("")
-  }, [department.slug])
+    setInputValue("");
+  }, [department.slug]);
 
   const handleClearConversation = useCallback(() => {
-    setInputValue("")
-    setTtsEnabled(true)
-    clearConversation()
-  }, [clearConversation])
+    setInputValue("");
+    setTtsEnabled(true);
+    clearConversation();
+  }, [clearConversation]);
 
-  const inactivityTimeoutMinutes = department.inactivityTimeoutMinutes ?? 5
+  const inactivityTimeoutMinutes = department.inactivityTimeoutMinutes ?? 5;
 
   useEffect(() => {
     if (messages.length <= 1) {
-      setAutoClearTarget(null)
-      return
+      setAutoClearTarget(null);
+      return;
     }
 
-    const duration = inactivityTimeoutMinutes * 60 * 1000
-    setAutoClearTarget(Date.now() + duration)
+    const duration = inactivityTimeoutMinutes * 60 * 1000;
+    setAutoClearTarget(Date.now() + duration);
 
     const timeoutId = setTimeout(() => {
-      handleClearConversation()
-    }, duration)
+      handleClearConversation();
+    }, duration);
 
-    return () => clearTimeout(timeoutId)
-  }, [messages, inputValue, isListening, handleClearConversation, inactivityTimeoutMinutes])
+    return () => clearTimeout(timeoutId);
+  }, [
+    messages,
+    inputValue,
+    isListening,
+    handleClearConversation,
+    inactivityTimeoutMinutes,
+  ]);
 
   const handleSubmit = useCallback(
     (value: string) => {
-      const nextValue = value.trim()
+      const nextValue = value.trim();
 
       if (!nextValue || isSubmitting || !apiConfigured) {
-        return
+        return;
       }
 
-      stopSpeaking()
-      stopListening()
-      setInputValue("")
-      void sendMessage(nextValue)
+      stopSpeaking();
+      stopListening();
+      setInputValue("");
+      void sendMessage(nextValue);
     },
     [apiConfigured, isSubmitting, sendMessage, stopListening, stopSpeaking],
-  )
+  );
 
-  const theme = department.theme
-  const disabled = !apiConfigured || isSubmitting
+  const theme = department.theme;
+  const disabled = !apiConfigured || isSubmitting;
   const shouldShowWaitingState =
     isSubmitting &&
     !(
       messages.length > 0 &&
       messages[messages.length - 1].role === "assistant" &&
       messages[messages.length - 1].content.length > 0
-    )
-  const waitingIndicatorMode = department.waitingConfig.mode === "video" ? "video" : "text"
-  const waitingVideoUrl = department.waitingConfig.videoUrl || "/Robot-dao-boi.webm"
+    );
+  const waitingIndicatorMode =
+    department.waitingConfig.mode === "video" ? "video" : "text";
+  const waitingVideoUrl =
+    department.waitingConfig.videoUrl || "/Robot-dao-boi.webm";
   const backgroundImage = theme.backgroundImageUrl
     ? `url("${theme.backgroundImageUrl}")`
-    : "linear-gradient(180deg,#F7F4EC_0%,#EEF7F0_52%,#F7F0E9_100%)"
+    : "linear-gradient(180deg,#F7F4EC_0%,#EEF7F0_52%,#F7F0E9_100%)";
 
   return (
     <main className="relative flex h-screen flex-col bg-slate-50/50 px-4 py-6 md:px-8">
@@ -247,9 +263,13 @@ export function ChatConversation({
           style={{ backgroundColor: theme.accent }}
         >
           <div>
-            <h2 className="text-lg font-bold text-white md:text-xl">{department.name}</h2>
+            <h2 className="text-lg font-bold text-white md:text-xl">
+              {department.name}
+            </h2>
             {department.description ? (
-              <p className="mt-1 text-sm text-white/90">{department.description}</p>
+              <p className="mt-1 text-sm text-white/90">
+                {department.description}
+              </p>
             ) : null}
           </div>
           <div className="flex items-center">
@@ -299,9 +319,14 @@ export function ChatConversation({
                       }}
                     >
                       <FakeStreamingText
-                        text={department.waitingConfig.text || "Đang tìm câu trả lời phù hợp cho bạn"}
+                        text={
+                          department.waitingConfig.text ||
+                          "Đang tìm câu trả lời phù hợp cho bạn"
+                        }
                         speed={department.waitingConfig.textSpeed || 60}
-                        cursorColor={department.waitingConfig.cursorColor || theme.accent}
+                        cursorColor={
+                          department.waitingConfig.cursorColor || theme.accent
+                        }
                       />
                     </div>
                   )}
@@ -331,13 +356,16 @@ export function ChatConversation({
                       disabled={disabled}
                       className={[
                         "rounded-full border px-3.5 py-2 text-sm font-medium transition-all hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50",
-                        !theme.suggestedPromptsTextColor ? "text-slate-100" : "",
+                        !theme.suggestedPromptsTextColor
+                          ? "text-slate-100"
+                          : "",
                       ]
                         .filter(Boolean)
                         .join(" ")}
                       style={{
                         backgroundColor:
-                          theme.suggestedPromptsBgColor || hexToRgba(theme.accent, 0.9),
+                          theme.suggestedPromptsBgColor ||
+                          hexToRgba(theme.accent, 0.9),
                         color: theme.suggestedPromptsTextColor || undefined,
                         borderColor: theme.suggestedPromptsBgColor
                           ? "transparent"
@@ -358,11 +386,13 @@ export function ChatConversation({
                   onChange={(event) => setInputValue(event.target.value)}
                   onKeyDown={(event: KeyboardEvent<HTMLTextAreaElement>) => {
                     if (event.key === "Enter" && !event.shiftKey) {
-                      event.preventDefault()
-                      handleSubmit(inputValue)
+                      event.preventDefault();
+                      handleSubmit(inputValue);
                     }
                   }}
-                  placeholder={department.placeholder || "Nhập câu hỏi của bạn..."}
+                  placeholder={
+                    department.placeholder || "Nhập câu hỏi của bạn..."
+                  }
                   disabled={disabled}
                   className="min-h-11 max-h-30 resize-none border-0 bg-transparent px-3 text-sm leading-6 text-slate-900 shadow-none focus-visible:ring-0"
                 />
@@ -390,7 +420,9 @@ export function ChatConversation({
                     onClick={stopSpeaking}
                     className={[
                       "rounded-full border-rose-200 bg-white/70 text-rose-600 shadow-lg transition-all hover:bg-rose-50 hover:text-rose-700",
-                      isSpeaking ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
+                      isSpeaking
+                        ? "pointer-events-auto opacity-100"
+                        : "pointer-events-none opacity-0",
                     ].join(" ")}
                   >
                     <VolumeX className="mr-2 h-4 w-4" />
@@ -402,9 +434,9 @@ export function ChatConversation({
                       id="tts-toggle"
                       checked={ttsEnabled}
                       onCheckedChange={(enabled) => {
-                        setTtsEnabled(enabled)
+                        setTtsEnabled(enabled);
                         if (!enabled) {
-                          stopSpeaking()
+                          stopSpeaking();
                         }
                       }}
                     />
@@ -424,12 +456,12 @@ export function ChatConversation({
                   isTranscribing={isTranscribing}
                   onPressStart={() => {
                     if (recognitionSupported) {
-                      void startListening()
+                      void startListening();
                     }
                   }}
                   onPressEnd={() => {
                     if (recognitionSupported) {
-                      stopListening({ submit: true })
+                      stopListening({ submit: true });
                     }
                   }}
                 />
@@ -437,7 +469,9 @@ export function ChatConversation({
 
               {!apiConfigured ? (
                 <p className="mt-2 text-center text-sm text-amber-700">
-                  {"API của ngành hàng này chưa được cấu hình nên chatbot đang bị khóa gửi tin."}
+                  {
+                    "API của ngành hàng này chưa được cấu hình nên chatbot đang bị khóa gửi tin."
+                  }
                 </p>
               ) : null}
             </div>
@@ -445,5 +479,5 @@ export function ChatConversation({
         </div>
       </section>
     </main>
-  )
+  );
 }
