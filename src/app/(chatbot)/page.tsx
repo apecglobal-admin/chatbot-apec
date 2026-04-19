@@ -25,7 +25,9 @@ export default async function HomePage() {
             </div>
 
             <div className="grid gap-5 md:grid-cols-3 xl:grid-cols-4">
-              {config.departments.map((department) => (
+              {config.departments
+                .filter((department) => department.integration.apiKeyConfigured)
+                .map((department) => (
                 <Link
                   key={department.id}
                   href={`/chat/${department.slug}`}
