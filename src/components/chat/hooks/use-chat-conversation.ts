@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import type { DepartmentConfig } from "@/lib/cms-types"
+import type { DepartmentConfig } from "@/types/cms"
 
-import type { ChatThreadMessage } from "../types"
-import { createWelcomeMessage, formatChatTimestamp } from "../utils"
-import { generateTimestampId } from "@/lib/utils"
+import type { ChatThreadMessage } from "@/types/chat"
+import { createWelcomeMessage } from "@/utils/chat"
+import { formatChatTimestamp, generateTimestampId } from "@/utils/date"
 
 interface UseChatConversationOptions {
   department: DepartmentConfig

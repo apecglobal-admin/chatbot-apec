@@ -1,6 +1,6 @@
 import Link from "next/link"
 
-import { hexToRgba } from "@/lib/color"
+import { hexToRgba } from "@/utils/color"
 import { getCmsConfig } from "@/lib/cms-store"
 
 export const dynamic = "force-dynamic"
@@ -30,7 +30,7 @@ export default async function HomePage() {
                 .map((department) => (
                 <Link
                   key={department.id}
-                  href={`/chat/${department.slug}`}
+                  href={`/${department.slug}`}
                   className="group overflow-hidden rounded-[30px] border border-white/70 bg-white/88 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.07)] transition hover:-translate-y-1 hover:shadow-[0_28px_72px_rgba(15,23,42,0.10)]"
                   style={{
                     backgroundImage: `linear-gradient(180deg, ${hexToRgba(

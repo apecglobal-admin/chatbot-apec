@@ -1,7 +1,7 @@
 "use client"
 
-import type { DepartmentTheme } from "@/lib/cms-types"
-import { hexToRgba } from "@/lib/color"
+import type { DepartmentTheme } from "@/types/cms"
+import { hexToRgba } from "@/utils/color"
 
 interface BotAvatarProps {
   theme: DepartmentTheme

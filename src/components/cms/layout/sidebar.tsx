@@ -1,34 +1,25 @@
+"use client"
+
 import Link from "next/link"
 import { ArrowLeft, LayoutDashboard, Plus } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import type { CmsConfig } from "@/lib/cms-types"
-import { cn } from "@/lib/utils"
+import { cn } from "@/utils/ui"
+import { useCms } from "./cms-provider"
 
-import type { CmsView } from "../types"
+export function Sidebar() {
+  const {
+    config,
+    isDirty,
+    configuredCount,
+    activeView,
+    activeDepartmentIndex,
+    handleSelectView,
+    openDepartment,
+    addDepartment,
+  } = useCms()
 
-interface CmsSidebarProps {
-  config: CmsConfig
-  isDirty: boolean
-  configuredCount: number
-  activeView: CmsView
-  activeDepartmentIndex: number
-  onSelectView: (view: CmsView) => void
-  onSelectDepartment: (index: number) => void
-  onAddDepartment: () => void
-}
-
-export function CmsSidebar({
-  config,
-  isDirty,
-  configuredCount,
-  activeView,
-  activeDepartmentIndex,
-  onSelectView,
-  onSelectDepartment,
-  onAddDepartment,
-}: CmsSidebarProps) {
   return (
     <aside className="h-fit max-h-[calc(100vh-32px)] overflow-y-auto custom-scrollbar rounded-3xl border border-slate-200 bg-white p-3 shadow-[0_12px_36px_rgba(15,23,42,0.06)] xl:sticky xl:top-4">
       <div className="space-y-3">
@@ -60,7 +51,6 @@ export function CmsSidebar({
               </p>
             </div>
           </div>
-
         </div>
 
         <div className="rounded-[20px] border border-slate-500 bg-slate-50/30 p-2">
@@ -74,7 +64,7 @@ export function CmsSidebar({
               <button
                 key={item.key}
                 type="button"
-                onClick={() => onSelectView(item.key)}
+                onClick={() => handleSelectView(item.key)}
                 className={cn(
                   "flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm font-bold transition-all duration-300",
                   isActive
@@ -97,7 +87,7 @@ export function CmsSidebar({
               <p className="text-sm font-bold text-slate-900 uppercase tracking-tight">Ngành hàng</p>
               <p className="text-[10px] font-medium text-slate-500">Mở từng chatbot để chỉnh sâu.</p>
             </div>
-            <Button type="button" size="sm" onClick={onAddDepartment} className="rounded-full px-3 h-8 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white">
+            <Button type="button" size="sm" onClick={() => void addDepartment()} className="rounded-full px-3 h-8 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white">
               <Plus className="h-3.5 w-3.5" />
               Thêm
             </Button>
@@ -111,7 +101,7 @@ export function CmsSidebar({
                 <button
                   key={`${department.id}-${index}`}
                   type="button"
-                  onClick={() => onSelectDepartment(index)}
+                  onClick={() => openDepartment(index)}
                   className={cn(
                     "flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-300 text-slate-900",
                     isActive

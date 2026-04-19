@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { TTSStreamer } from "../utils/tts-streamer"
+import { TTSStreamer } from "@/utils/audio"
 
 interface UseVoiceAssistantOptions {
   onTranscriptChange: (text: string) => void

@@ -1,6 +1,8 @@
+"use client"
+
 import { Bot, ExternalLink, Palette, Settings2, X } from "lucide-react"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/utils/ui"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -11,59 +13,34 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import type { DepartmentConfig } from "@/lib/cms-types"
 
 import { SectionCard } from "../shared/section-card"
-import {
-  cmsInputClass,
-  cmsTextareaClass,
-} from "../shared/styles"
-import { CloudinaryMediaInput } from "./cloudinary-media-input"
-import { CmsDepartmentPreview } from "./cms-department-preview"
+import { cmsInputClass, cmsTextareaClass } from "../shared/styles"
+import { MediaInput } from "./media-input"
+import { Preview } from "./preview"
 import { FieldBlock } from "./field-block"
-import { themeFields } from "./theme-fields"
+import { themeFields } from "../constants"
+import { useCms } from "../layout/cms-provider"
 
-interface CmsDepartmentViewProps {
+interface EditorViewProps {
   headerNode?: React.ReactNode
-  department: DepartmentConfig
-  onUpdateDepartment: <K extends keyof DepartmentConfig>(
-    field: K,
-    value: DepartmentConfig[K],
-  ) => void
-  onUpdateIntegration: (
-    field: keyof DepartmentConfig["integration"],
-    value: string | number | boolean,
-  ) => void
-  onUpdateTheme: (
-    field: keyof DepartmentConfig["theme"],
-    value: string,
-  ) => void
-  onUpdateWaitingConfig: (
-    field: keyof DepartmentConfig["waitingConfig"],
-    value: string | number,
-  ) => void
-  onUploadThemeMedia: (
-    field: keyof DepartmentConfig["theme"],
-    value: string,
-  ) => Promise<void> | void
-  onUploadWaitingMedia: (
-    field: keyof DepartmentConfig["waitingConfig"],
-    value: string,
-  ) => Promise<void> | void
 }
 
-export function CmsDepartmentView({
-  headerNode,
-  department,
-  onUpdateDepartment,
-  onUpdateIntegration,
-  onUpdateTheme,
-  onUpdateWaitingConfig,
-  onUploadThemeMedia,
-  onUploadWaitingMedia,
-}: CmsDepartmentViewProps) {
-  const waitingIndicatorMode =
-    department.waitingConfig.mode === "text" ? "text" : "video"
+export function EditorView({ headerNode }: EditorViewProps) {
+  const {
+    activeDepartment: department,
+    activeDepartmentIndex: index,
+    updateDepartment,
+    updateIntegration,
+    updateTheme,
+    updateWaitingConfig,
+    uploadThemeMedia,
+    uploadWaitingMedia,
+  } = useCms()
+
+  if (!department) return null
+
+  const waitingIndicatorMode = department.waitingConfig.mode === "text" ? "text" : "video"
 
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px] items-start min-w-0">
@@ -79,7 +56,7 @@ export function CmsDepartmentView({
           <FieldBlock label="Tên hiển thị">
             <Input
               value={department.name}
-              onChange={(event) => onUpdateDepartment("name", event.target.value)}
+              onChange={(event) => updateDepartment(index, "name", event.target.value)}
               className={cmsInputClass}
             />
           </FieldBlock>
@@ -87,7 +64,7 @@ export function CmsDepartmentView({
           <FieldBlock label="Kệ / vị trí">
             <Input
               value={department.zoneLabel}
-              onChange={(event) => onUpdateDepartment("zoneLabel", event.target.value)}
+              onChange={(event) => updateDepartment(index, "zoneLabel", event.target.value)}
               className={cmsInputClass}
             />
           </FieldBlock>
@@ -95,7 +72,7 @@ export function CmsDepartmentView({
           <FieldBlock label="Slug URL">
             <Input
               value={department.slug}
-              onChange={(event) => onUpdateDepartment("slug", event.target.value)}
+              onChange={(event) => updateDepartment(index, "slug", event.target.value)}
               className={cmsInputClass}
             />
           </FieldBlock>
@@ -103,7 +80,7 @@ export function CmsDepartmentView({
           <FieldBlock label="Mô tả ngành hàng" className="md:col-span-2">
             <Textarea
               value={department.description}
-              onChange={(event) => onUpdateDepartment("description", event.target.value)}
+              onChange={(event) => updateDepartment(index, "description", event.target.value)}
               className={`${cmsTextareaClass} min-h-[60px]`}
             />
           </FieldBlock>
@@ -112,7 +89,7 @@ export function CmsDepartmentView({
             <Textarea
               value={department.welcomeMessage}
               onChange={(event) =>
-                onUpdateDepartment("welcomeMessage", event.target.value)
+                updateDepartment(index, "welcomeMessage", event.target.value)
               }
               className={`${cmsTextareaClass} min-h-[60px]`}
             />
@@ -121,7 +98,7 @@ export function CmsDepartmentView({
           <FieldBlock label="Placeholder ô chat" className="md:col-span-2">
             <Textarea
               value={department.placeholder}
-              onChange={(event) => onUpdateDepartment("placeholder", event.target.value)}
+              onChange={(event) => updateDepartment(index, "placeholder", event.target.value)}
               className={cmsTextareaClass}
             />
           </FieldBlock>
@@ -134,7 +111,8 @@ export function CmsDepartmentView({
             <Textarea
               value={department.suggestedPrompts.join("\n")}
               onChange={(event) =>
-                onUpdateDepartment(
+                updateDepartment(
+                  index,
                   "suggestedPrompts",
                   event.target.value.split("\n")
                 )
@@ -156,7 +134,7 @@ export function CmsDepartmentView({
           >
             <Select
               value={waitingIndicatorMode}
-              onValueChange={(value) => onUpdateWaitingConfig("mode", value)}
+              onValueChange={(value) => updateWaitingConfig(index, "mode", value as any)}
             >
               <SelectTrigger className={`${cmsInputClass} w-full`}>
                 <SelectValue placeholder="Chọn kiểu hiển thị" />
@@ -176,7 +154,7 @@ export function CmsDepartmentView({
               >
                 <Input
                   value={department.waitingConfig.text ?? ""}
-                  onChange={(event) => onUpdateWaitingConfig("text", event.target.value)}
+                  onChange={(event) => updateWaitingConfig(index, "text", event.target.value)}
                   className={cmsInputClass}
                   placeholder="Đang tìm câu trả lời phù hợp cho bạn"
                 />
@@ -191,7 +169,7 @@ export function CmsDepartmentView({
                   max={200}
                   value={department.waitingConfig.textSpeed ?? 60}
                   onChange={(event) =>
-                    onUpdateWaitingConfig("textSpeed", event.target.value)
+                    updateWaitingConfig(index, "textSpeed", Number(event.target.value))
                   }
                   className={cmsInputClass}
                 />
@@ -204,14 +182,14 @@ export function CmsDepartmentView({
                       department.waitingConfig.cursorColor || department.theme.accent
                     }
                     onChange={(event) =>
-                      onUpdateWaitingConfig("cursorColor", event.target.value)
+                      updateWaitingConfig(index, "cursorColor", event.target.value)
                     }
                     className="h-9 w-10 rounded-lg border-0 bg-transparent"
                   />
                   <Input
                     value={department.waitingConfig.cursorColor ?? ""}
                     onChange={(event) =>
-                      onUpdateWaitingConfig("cursorColor", event.target.value)
+                      updateWaitingConfig(index, "cursorColor", event.target.value)
                     }
                     className="h-9 rounded-xl border-0 bg-white shadow-none"
                     placeholder={department.theme.accent}
@@ -222,16 +200,16 @@ export function CmsDepartmentView({
           ) : (
             <FieldBlock
               label="Video chờ phản hồi"
-              hint="Dán URL hoặc upload video lên Cloudinary. Nếu để trống sẽ fallback về /Robot-dao-boi.webm."
+              hint="Dán URL hoặc upload video. Nếu để trống sẽ mặc định là /Robot-dao-boi.webm."
               className="xl:col-span-3"
             >
-              <CloudinaryMediaInput
+              <MediaInput
                 resourceType="video"
                 accept="video/*"
                 value={department.waitingConfig.videoUrl ?? ""}
-                onChange={(value) => onUpdateWaitingConfig("videoUrl", value)}
+                onChange={(value) => updateWaitingConfig(index, "videoUrl", value)}
                 onUploadComplete={(value) =>
-                  onUploadWaitingMedia("videoUrl", value)
+                  void uploadWaitingMedia(index, "videoUrl", value)
                 }
                 placeholder="https://res.cloudinary.com/.../video/upload/..."
               />
@@ -246,18 +224,18 @@ export function CmsDepartmentView({
           contentClassName="space-y-4"
         >
           <div className="grid gap-4 md:grid-cols-2">
-            {themeFields.map(({ field, label }) => (
-              <FieldBlock key={field} label={label}>
+            {themeFields.map(({ field, label, hint }) => (
+              <FieldBlock key={field} label={label} hint={hint}>
                 <div className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-2.5">
                   <input
                     type="color"
                     value={department.theme[field] || "#000000"}
-                    onChange={(event) => onUpdateTheme(field, event.target.value)}
+                    onChange={(event) => updateTheme(index, field, event.target.value)}
                     className="h-9 w-10 rounded-lg border-0 bg-transparent"
                   />
                   <Input
                     value={department.theme[field] || ""}
-                    onChange={(event) => onUpdateTheme(field, event.target.value)}
+                    onChange={(event) => updateTheme(index, field, event.target.value)}
                     className="h-9 rounded-xl border-0 bg-white shadow-none"
                     placeholder="Mặc định"
                   />
@@ -269,45 +247,32 @@ export function CmsDepartmentView({
           <div className="grid gap-4">
             <FieldBlock
               label="Ảnh nền"
-              hint="Dán URL hoặc upload trực tiếp lên Cloudinary."
+              hint="Dán URL hoặc upload ảnh"
             >
-              <CloudinaryMediaInput
+              <MediaInput
                 resourceType="image"
                 accept="image/*"
                 value={department.theme.backgroundImageUrl ?? ""}
-                onChange={(value) => onUpdateTheme("backgroundImageUrl", value)}
+                onChange={(value) => updateTheme(index, "backgroundImageUrl", value)}
                 onUploadComplete={(value) =>
-                  onUploadThemeMedia("backgroundImageUrl", value)
+                  void uploadThemeMedia(index, "backgroundImageUrl", value)
                 }
                 placeholder="https://example.com/background.jpg"
               />
             </FieldBlock>
             <FieldBlock
               label="Avatar chatbot"
-              hint="Dán URL hoặc upload trực tiếp lên Cloudinary."
+              hint="Dán URL hoặc upload"
             >
-              <CloudinaryMediaInput
+              <MediaInput
                 resourceType="image"
                 accept="image/*"
                 value={department.theme.botAvatarUrl ?? ""}
-                onChange={(value) => onUpdateTheme("botAvatarUrl", value)}
-                onUploadComplete={(value) => onUploadThemeMedia("botAvatarUrl", value)}
+                onChange={(value) => updateTheme(index, "botAvatarUrl", value)}
+                onUploadComplete={(value) => void uploadThemeMedia(index, "botAvatarUrl", value)}
                 placeholder="https://example.com/avatar.jpg"
               />
             </FieldBlock>
-            {/* <FieldBlock
-              label="Logo trợ lý"
-              hint="Dán URL hoặc upload trực tiếp lên Cloudinary."
-            >
-              <CloudinaryMediaInput
-                resourceType="image"
-                accept="image/*"
-                value={department.theme.headerLogoUrl ?? ""}
-                onChange={(value) => onUpdateTheme("headerLogoUrl", value)}
-                onUploadComplete={(value) => onUploadThemeMedia("headerLogoUrl", value)}
-                placeholder="https://example.com/logo.jpg"
-              />
-            </FieldBlock> */}
           </div>
         </SectionCard>
 
@@ -329,7 +294,7 @@ export function CmsDepartmentView({
             <Input
               value={department.integration.assistantSlug}
               onChange={(event) =>
-                onUpdateIntegration("assistantSlug", event.target.value)
+                updateIntegration(index, "assistantSlug", event.target.value)
               }
               placeholder="slug"
               className={cmsInputClass}
@@ -350,14 +315,14 @@ export function CmsDepartmentView({
               <Input
                 type="password"
                 value={department.integration.apiKey}
-                onChange={(event) => onUpdateIntegration("apiKey", event.target.value)}
+                onChange={(event) => updateIntegration(index, "apiKey", event.target.value)}
                 className={cn(cmsInputClass, department.integration.apiKey && "pr-10")}
                 placeholder="Nhập API key"
               />
               {department.integration.apiKey ? (
                 <button
                   type="button"
-                  onClick={() => onUpdateIntegration("apiKey", "")}
+                  onClick={() => updateIntegration(index, "apiKey", "")}
                   className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
                   title="Xóa API key"
                 >
@@ -370,7 +335,7 @@ export function CmsDepartmentView({
           <FieldBlock label="Endpoint" className="md:col-span-2">
             <Input
               value={department.integration.endpoint}
-              onChange={(event) => onUpdateIntegration("endpoint", event.target.value)}
+              onChange={(event) => updateIntegration(index, "endpoint", event.target.value)}
               className={cmsInputClass}
             />
           </FieldBlock>
@@ -382,7 +347,8 @@ export function CmsDepartmentView({
               max={60000}
               value={department.integration.requestTimeoutMs}
               onChange={(event) =>
-                onUpdateIntegration(
+                updateIntegration(
+                  index,
                   "requestTimeoutMs",
                   Number(event.target.value) || 20000,
                 )
@@ -391,8 +357,6 @@ export function CmsDepartmentView({
             />
           </FieldBlock>
 
-
-
           <FieldBlock label="Auto clear chat (phút)" hint="Reset trò chuyện nếu không có tin nhắn mới.">
             <Input
               type="number"
@@ -400,7 +364,8 @@ export function CmsDepartmentView({
               max={60}
               value={department.inactivityTimeoutMinutes ?? 5}
               onChange={(event) =>
-                onUpdateDepartment(
+                updateDepartment(
+                  index,
                   "inactivityTimeoutMinutes",
                   Number(event.target.value) || 5,
                 )
@@ -431,7 +396,7 @@ export function CmsDepartmentView({
         </SectionCard>
       </div>
 
-      <CmsDepartmentPreview department={department} />
+      <Preview key={department.id} department={department} />
     </div>
   )
 }

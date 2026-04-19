@@ -1,5 +1,46 @@
-import type { DepartmentConfig } from "@/lib/cms-types"
+import type { CmsConfig, DepartmentConfig } from "@/types/cms"
 
+/**
+ * List of theme fields that should not be converted to uppercase
+ */
+export const SKIP_UPPERCASE_THEME_FIELDS = ["backgroundImageUrl", "botAvatarUrl", "headerLogoUrl"]
+
+/**
+ * Builds a new CmsConfig object with an updated theme field for a specific department
+ */
+export function buildConfigWithThemeUpdate(
+  current: CmsConfig,
+  index: number,
+  field: keyof DepartmentConfig["theme"],
+  value: string,
+) {
+  return {
+    ...current,
+    departments: current.departments.map((department, departmentIndex) =>
+      departmentIndex === index
+        ? {
+            ...department,
+            theme: {
+              ...department.theme,
+              [field]: SKIP_UPPERCASE_THEME_FIELDS.includes(field) ? value : value.toUpperCase(),
+            },
+          }
+        : department,
+    ),
+  }
+}
+
+/**
+ * Checks if a specific department configuration has changed compared to its original snapshot
+ */
+export function isDepartmentDirty(current: DepartmentConfig | null, original: DepartmentConfig | null): boolean {
+  if (!current || !original) return false
+  return JSON.stringify(current) !== JSON.stringify(original)
+}
+
+/**
+ * Generates an empty department configuration with default values
+ */
 export function emptyDepartment(index: number): DepartmentConfig {
   return {
     id: `department-${index}`,
@@ -39,11 +80,4 @@ export function emptyDepartment(index: number): DepartmentConfig {
     },
     inactivityTimeoutMinutes: 5,
   }
-}
-
-export function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value))
 }

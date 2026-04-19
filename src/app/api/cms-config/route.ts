@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { saveCmsConfig } from "@/lib/cms-store"
-import type { CmsConfig } from "@/lib/cms-types"
+import type { CmsConfig } from "@/types/cms"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"

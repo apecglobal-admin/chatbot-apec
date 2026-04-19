@@ -1,29 +1,23 @@
+"use client"
+
 import { AlertTriangle, Bot, MessageSquareText, Workflow } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
-import type { CmsConfig } from "@/lib/cms-types"
-import { cn } from "@/lib/utils"
-
+import { cn } from "@/utils/ui"
 import { SectionCard } from "../shared/section-card"
 import { MetricCard } from "./metric-card"
+import { useCms } from "../layout/cms-provider"
 
-interface CmsDashboardViewProps {
-  config: CmsConfig
-  isDirty: boolean
-  configuredCount: number
-  missingApiKeyCount: number
-  departmentsWithPromptSet: number
-  onOpenDepartment: (index: number) => void
-}
+export function DashboardView() {
+  const {
+    config,
+    isDirty,
+    configuredCount,
+    missingApiKeyCount,
+    departmentsWithPromptSet,
+    openDepartment,
+  } = useCms()
 
-export function CmsDashboardView({
-  config,
-  isDirty,
-  configuredCount,
-  missingApiKeyCount,
-  departmentsWithPromptSet,
-  onOpenDepartment,
-}: CmsDashboardViewProps) {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-3">
@@ -103,7 +97,7 @@ export function CmsDashboardView({
                 <button
                   key={`${department.id}-${index}-row`}
                   type="button"
-                  onClick={() => onOpenDepartment(index)}
+                  onClick={() => openDepartment(index)}
                   className="grid w-full grid-cols-[minmax(0,3fr)_100px_100px_70px] gap-3 px-4 py-3 text-left transition hover:bg-slate-50"
                 >
                   <div className="min-w-0">

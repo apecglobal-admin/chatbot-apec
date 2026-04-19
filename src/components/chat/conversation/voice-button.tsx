@@ -2,8 +2,8 @@
 
 import { Loader2, Mic } from "lucide-react"
 
-import { hexToRgba } from "@/lib/color"
-import { cn } from "@/lib/utils"
+import { hexToRgba } from "@/utils/color"
+import { cn } from "@/utils/ui"
 
 interface VoiceButtonProps {
   accent: string

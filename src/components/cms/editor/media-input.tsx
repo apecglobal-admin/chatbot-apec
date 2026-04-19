@@ -5,11 +5,11 @@ import { Loader2, Save, Upload, UploadIcon, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/ui";
 
 import { cmsInsetClass, cmsInputClass } from "../shared/styles";
 
-interface CloudinaryMediaInputProps {
+interface MediaInputProps {
   accept: string;
   placeholder: string;
   resourceType: "image" | "video";
@@ -18,14 +18,14 @@ interface CloudinaryMediaInputProps {
   onUploadComplete?: (value: string) => Promise<void> | void;
 }
 
-export function CloudinaryMediaInput({
+export function MediaInput({
   accept,
   placeholder,
   resourceType,
   value,
   onChange,
   onUploadComplete,
-}: CloudinaryMediaInputProps) {
+}: MediaInputProps) {
   const inputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);

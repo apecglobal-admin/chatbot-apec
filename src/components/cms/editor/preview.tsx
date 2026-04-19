@@ -4,22 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { VoiceButton } from "@/components/chat/controls/voice-button";
+import { VoiceButton } from "@/components/chat/conversation/voice-button";
 import { ChatMessage } from "@/components/chat/conversation/chat-message";
 import { FakeStreamingText } from "@/components/chat/waiting-response/fake-streaming-text";
 import { WaitingVideo } from "@/components/chat/waiting-response/waiting-video";
 import { BotAvatar } from "@/components/chat/shared/bot-avatar";
-import type { DepartmentConfig } from "@/lib/cms-types";
-import { hexToRgba } from "@/lib/color";
-import { cn } from "@/lib/utils";
+import type { DepartmentConfig } from "@/types/cms";
+import { cmsInsetClass, cmsInputClass } from "../shared/styles";
+import { hexToRgba } from "@/utils/color";
+import { cn } from "@/utils/ui";
 
-interface CmsDepartmentPreviewProps {
+interface PreviewProps {
   department: DepartmentConfig;
 }
 
-export function CmsDepartmentPreview({
-  department,
-}: CmsDepartmentPreviewProps) {
+export function Preview({ department }: PreviewProps) {
   const theme = department.theme;
   const waitingIndicatorMode =
     department.waitingConfig.mode === "video" ? "video" : "text";
@@ -67,7 +66,8 @@ export function CmsDepartmentPreview({
           style={{
             backgroundImage,
             backgroundPosition: "center",
-            backgroundSize: theme.backgroundImageUrl ? "cover" : undefined,
+            backgroundSize: "cover",
+            backgroundRepeat: "no-repeat",
           }}
         >
           <div className="relative z-10 flex-1 space-y-4 overflow-y-auto custom-scrollbar px-5 py-4">

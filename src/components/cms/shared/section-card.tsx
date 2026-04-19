@@ -2,7 +2,7 @@ import { type ReactNode } from "react"
 import { type LucideIcon } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { cn } from "@/lib/utils"
+import { cn } from "@/utils/ui"
 
 interface SectionCardProps {
   title: string
@@ -30,7 +30,7 @@ export function SectionCard({
         className,
       )}
     >
-      <CardHeader className="relative px-4 py-3 md:px-5 bg-gradient-to-tr from-emerald-300/90 via-white to-orange-300/90">
+      <CardHeader className="relative px-4 py-3 md:px-5 bg-gradient-to-tr from-emerald-300 via-white to-orange-300">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3 ">
             <div className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700">

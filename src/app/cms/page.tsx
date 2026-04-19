@@ -1,0 +1,90 @@
+"use client"
+
+import { KeyRound, Trash2 } from "lucide-react"
+
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/utils/ui"
+
+import { useCms } from "@/components/cms/layout/cms-provider"
+import { Header } from "@/components/cms/layout/header"
+import { DashboardView } from "@/components/cms/dashboard/dashboard-view"
+import { EditorView } from "@/components/cms/editor/editor-view"
+
+export default function Page() {
+  const { 
+    activeView, 
+    activeDepartment, 
+    config, 
+    removeDepartment, 
+    activeDepartmentIndex 
+  } = useCms()
+
+  const currentViewTitle = activeView === "dashboard" 
+    ? "Bảng điều khiển CMS" 
+    : activeDepartment?.name ?? "Ngành hàng"
+
+  const headerMeta = activeView === "department" && activeDepartment ? (
+    <>
+      <Badge
+        className="rounded-full px-2.5 py-0.5 text-xs font-semibold"
+        style={{
+          backgroundColor: activeDepartment.theme.accentSoft,
+          color: activeDepartment.theme.badge,
+        }}
+      >
+        {activeDepartment.zoneLabel}
+      </Badge>
+      <Badge
+        variant="outline"
+        className="rounded-full border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-700"
+      >
+        {activeDepartment.slug}
+      </Badge>
+      <Badge
+        className={cn(
+          "rounded-full px-2.5 py-0.5 text-[11px] font-medium",
+          activeDepartment.integration.apiKeyConfigured
+            ? "bg-emerald-100/80 text-emerald-700 hover:bg-emerald-100"
+            : "bg-amber-100 text-amber-700 hover:bg-amber-100",
+        )}
+      >
+        <KeyRound className="h-3 w-3 mr-1" />
+        {activeDepartment.integration.apiKeyConfigured ? "Đã có API key" : "Thiếu API key"}
+      </Badge>
+    </>
+  ) : undefined
+
+  const headerAction = activeView === "department" && activeDepartment ? (
+    <Button
+      type="button"
+      variant="outline"
+      onClick={() => void removeDepartment(activeDepartmentIndex)}
+      disabled={config.departments.length <= 1}
+      className="h-7 rounded-full px-2.5 text-[11px] text-red-500 bg-red-50 border-red-100 hover:text-red-600 hover:bg-red-100 hover:border-red-200 transition-colors"
+    >
+      <Trash2 className="h-3 w-3" />
+      <span className="hidden sm:inline">Xóa ngành hàng</span>
+    </Button>
+  ) : undefined
+
+  return (
+    <section className={cn("min-w-0", activeView === "dashboard" && "p-6")}>
+
+      {activeView === "dashboard" ? (
+        <DashboardView />
+      ) : (
+        <EditorView
+          headerNode={
+            <Header
+              title={currentViewTitle}
+              updatedAt={activeDepartment?.updatedAt ?? config.updatedAt}
+              meta={headerMeta}
+              action={headerAction}
+            />
+          }
+        />
+      )}
+    </section>
+  )
+}

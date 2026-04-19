@@ -1,9 +1,10 @@
 "use client";
 
-import type { DepartmentTheme } from "@/lib/cms-types";
-import { hexToRgba } from "@/lib/color";
-import { cn } from "@/lib/utils";
+import type { DepartmentTheme } from "@/types/cms";
+import { hexToRgba } from "@/utils/color";
+import { cn } from "@/utils/ui";
 import { useEffect, useRef, useState } from "react";
+import type { ChatRole } from "@/types/chat";
 
 import { BotAvatar } from "../shared/bot-avatar";
 
@@ -166,7 +167,7 @@ function MessageContent({
 }
 
 interface ChatMessageProps {
-  role: "user" | "assistant";
+  role: ChatRole;
   content: string;
   timestamp?: string;
   theme: DepartmentTheme;

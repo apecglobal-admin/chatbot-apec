@@ -2,7 +2,7 @@ import "server-only"
 
 import { z } from "zod"
 
-import { decrypt, encrypt } from "@/lib/crypto"
+import { decrypt, encrypt } from "@/utils/crypto"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 import type {
   CmsConfig,
@@ -10,7 +10,7 @@ import type {
   DepartmentIntegration,
   DepartmentTheme,
   DepartmentWaitingConfig,
-} from "@/lib/cms-types"
+} from "@/types/cms"
 
 const COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/
 const WAITING_INDICATOR_MODES = ["text", "video"] as const
