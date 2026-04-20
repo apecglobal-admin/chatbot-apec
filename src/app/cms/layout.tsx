@@ -1,6 +1,6 @@
-import { getCmsConfig } from "@/lib/cms-store"
-import { CmsProvider as Provider } from "@/components/cms/layout/cms-provider"
-import { Sidebar } from "@/components/cms/layout/sidebar"
+import { getCmsConfig } from "@/features/cms/api/cms-store"
+import { CmsProvider as Provider } from "@/features/cms/components/layout/cms-provider"
+import { Sidebar } from "@/features/cms/components/layout/sidebar"
 import { getSession } from "@/features/auth/api/get-session"
 import { AuthSync } from "@/features/auth/components/auth-sync"
 

@@ -5,10 +5,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Users, Plus, Check, Save, Trash2, KeyRound, User as UserIcon, Shield } from "lucide-react"
 import { toast } from "sonner"
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Button } from "@/shared/components/ui/button"
+import { Input } from "@/shared/components/ui/input"
 import { getUsers, getRoles, saveUser, deleteUser } from "../api/rbac-actions"
-import { cn } from "@/utils/ui"
+import { cn } from "@/shared/utils/ui"
 import type { User, Role, SaveUserPayload } from "../types"
 
 export function UserManager() {

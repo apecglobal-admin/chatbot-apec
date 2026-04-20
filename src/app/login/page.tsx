@@ -8,7 +8,7 @@ import { z } from "zod";
 import { Bot, Lock, User } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import {
   Form,
   FormControl,
@@ -16,12 +16,12 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
+} from "@/shared/components/ui/form";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
-} from "@/components/ui/input-group";
+} from "@/shared/components/ui/input-group";
 import { loginAction } from "@/features/auth/api/auth-actions";
 
 const loginSchema = z.object({

@@ -2,14 +2,14 @@
 
 import { KeyRound, Trash2 } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/utils/ui"
+import { Badge } from "@/shared/components/ui/badge"
+import { Button } from "@/shared/components/ui/button"
+import { cn } from "@/shared/utils/ui"
 
-import { useCms } from "@/components/cms/layout/cms-provider"
-import { Header } from "@/components/cms/layout/header"
-import { DashboardView } from "@/components/cms/dashboard/dashboard-view"
-import { EditorView } from "@/components/cms/editor/editor-view"
+import { useCms } from "@/features/cms/components/layout/cms-provider"
+import { Header } from "@/features/cms/components/layout/header"
+import { DashboardView } from "@/features/cms/components/dashboard/dashboard-view"
+import { EditorView } from "@/features/cms/components/editor/editor-view"
 import { RoleManager } from "@/features/rbac/components/role-manager"
 import { UserManager } from "@/features/rbac/components/user-manager"
 import { PermissionGuard } from "@/features/auth/components/permission-guard"

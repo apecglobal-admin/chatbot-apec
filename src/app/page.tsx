@@ -1,7 +1,7 @@
 import Link from "next/link"
 
-import { hexToRgba } from "@/utils/color"
-import { getCmsConfig } from "@/lib/cms-store"
+import { hexToRgba } from "@/shared/utils/color"
+import { getCmsConfig } from "@/features/cms/api/cms-store"
 
 export const dynamic = "force-dynamic"
 

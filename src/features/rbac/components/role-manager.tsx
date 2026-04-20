@@ -5,11 +5,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { ShieldCheck, Plus, Check, Save, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Button } from "@/shared/components/ui/button"
+import { Input } from "@/shared/components/ui/input"
 import { getRoles, getPermissions, saveRole, deleteRole } from "../api/rbac-actions"
-import { cn } from "@/utils/ui"
-import { Textarea } from "@/components/ui/textarea"
+import { cn } from "@/shared/utils/ui"
+import { Textarea } from "@/shared/components/ui/textarea"
 import type { Role, Permission, SaveRolePayload } from "../types"
 
 export function RoleManager() {

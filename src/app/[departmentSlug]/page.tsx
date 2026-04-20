@@ -1,7 +1,7 @@
-﻿import { notFound } from "next/navigation"
+import { notFound } from "next/navigation"
 
-import { ChatConversation } from "@/components/chat"
-import { getCmsConfig } from "@/lib/cms-store"
+import { ChatConversation } from "@/features/chat"
+import { getCmsConfig } from "@/features/cms/api/cms-store"
 
 export const dynamic = "force-dynamic"
 

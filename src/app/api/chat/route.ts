@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
-import { getCmsConfig } from "@/lib/cms-store"
+import { getCmsConfig } from "@/features/cms/api/cms-store"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
