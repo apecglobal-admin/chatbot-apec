@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Bot, Lock, User } from "lucide-react";
+import { Bot, Lock, User, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/shared/components/ui/button";
@@ -20,6 +20,7 @@ import {
 import {
   InputGroup,
   InputGroupAddon,
+  InputGroupButton,
   InputGroupInput,
 } from "@/shared/components/ui/input-group";
 import { loginAction } from "@/features/auth/api/auth-actions";
@@ -34,6 +35,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -123,10 +125,23 @@ export default function LoginPage() {
                             <Lock className="text-slate-400" />
                           </InputGroupAddon>
                           <InputGroupInput
-                            type="password"
+                            type={showPassword ? "text" : "password"}
                             placeholder="••••••••"
                             {...field}
                           />
+                          <InputGroupAddon align="inline-end" className="pr-4">
+                            <InputGroupButton
+                              size="icon-sm"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="text-slate-400 hover:text-indigo-600 transition-colors hover:bg-transparent"
+                            >
+                              {showPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </InputGroupButton>
+                          </InputGroupAddon>
                         </InputGroup>
                       </FormControl>
                     <FormMessage className="text-xs" />

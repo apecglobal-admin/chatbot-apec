@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Users, Plus, Check, Save, Trash2, KeyRound, User as UserIcon, Shield } from "lucide-react"
+import { Users, Plus, Check, Save, Trash2, KeyRound, User as UserIcon, Shield, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/shared/components/ui/button"
@@ -14,6 +14,7 @@ import type { User, Role, SaveUserPayload } from "../types"
 export function UserManager() {
   const queryClient = useQueryClient()
   const [editingUser, setEditingUser] = useState<SaveUserPayload | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
 
   const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ["users"],
@@ -31,6 +32,7 @@ export function UserManager() {
       queryClient.invalidateQueries({ queryKey: ["users"] })
       toast.success("Đã cập nhật nhân sự thành công.")
       setEditingUser(null)
+      setShowPassword(false)
     },
     onError: (err: any) => {
       toast.error(err.message || "Lỗi khi lưu nhân sự.")
@@ -56,6 +58,7 @@ export function UserManager() {
       roleIds: user.user_roles.map((ur) => ur.role_id),
       password: "",
     })
+    setShowPassword(false)
   }
 
   const handleCreate = () => {
@@ -65,6 +68,7 @@ export function UserManager() {
       password: "",
       roleIds: [],
     })
+    setShowPassword(false)
   }
 
   const handleDelete = (user: User) => {
@@ -108,9 +112,9 @@ export function UserManager() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-100 border-b border-slate-200">
-                <th className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-600 w-[230px]">Thành viên</th>
+                <th className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-600 w-[220px]">Thành viên</th>
                 <th className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-600">Phân quyền</th>
-                <th className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-600 text-right w-[120px]">Thao tác</th>
+                <th className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-600 text-right w-[100px]">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100/80">
@@ -201,7 +205,7 @@ export function UserManager() {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                onClick={() => setEditingUser(null)} 
+                onClick={() => { setEditingUser(null); setShowPassword(false); }} 
                 className="rounded-full h-7 w-7 hover:bg-slate-200/60 text-slate-500 transition-colors"
               >
                 <Plus className="h-4 w-4 rotate-45" />
@@ -240,13 +244,20 @@ export function UserManager() {
                   </label>
                   <div className="relative">
                     <Input 
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       value={editingUser.password} 
                       onChange={(e) => setEditingUser({ ...editingUser, password: e.target.value })}
                       placeholder="••••••••"
-                      className="rounded-lg border-slate-200 h-9 text-[13px] font-semibold pl-9 shadow-[0_1px_2px_rgba(0,0,0,0.02)] focus-visible:ring-1 focus-visible:ring-emerald-500/40"
+                      className="rounded-lg border-slate-200 h-9 text-[13px] font-semibold pl-9 pr-9 shadow-[0_1px_2px_rgba(0,0,0,0.02)] focus-visible:ring-1 focus-visible:ring-emerald-500/40"
                     />
                     <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors focus:outline-none"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -290,7 +301,7 @@ export function UserManager() {
             <div className="px-4 py-2.5 border-t border-slate-200 bg-slate-100 flex gap-2">
               <Button 
                 variant="outline" 
-                onClick={() => setEditingUser(null)} 
+                onClick={() => { setEditingUser(null); setShowPassword(false); }} 
                 className="flex-1 rounded-lg h-8 font-semibold text-[11px] text-slate-700 border-slate-300 shadow-sm bg-white hover:bg-slate-50"
               >
                 Đóng
