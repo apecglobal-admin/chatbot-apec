@@ -4,6 +4,7 @@ import { z } from "zod"
 
 import { decrypt, encrypt } from "@/utils/crypto"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
+import { getSession } from "@/features/auth/api/get-session"
 import type {
   CmsConfig,
   DepartmentConfig,
@@ -541,6 +542,11 @@ export async function getCmsConfig(options?: { includeSecrets?: boolean }) {
 // ── Write ───────────────────────────────────────────────────────────
 
 export async function saveCmsConfig(input: CmsConfig) {
+  const session = await getSession()
+  if (!session || (!session.roles.includes("Admin") && !session.permissions.some(p => p.startsWith("department:")))) {
+    throw new Error("Bạn không có quyền thực hiện hành động này.")
+  }
+
   const supabase = getSupabaseAdmin() as any
   const existingConfig = await getCmsConfig({ includeSecrets: true }).catch(() => null)
   const existingSecrets = new Map(
@@ -674,8 +680,44 @@ export async function saveCmsConfig(input: CmsConfig) {
 }
 
 export async function saveDepartment(department: DepartmentConfig) {
+  const session = await getSession()
+  if (!session) throw new Error("Chưa đăng nhập.")
+
+  const isAdmin = session.roles.includes("Admin")
+  const canEditTheme = session.permissions.includes("department:theme")
+  const canEditBackend = session.permissions.includes("department:backend")
+  const canCreate = session.permissions.includes("department:create")
+
   const supabase = getSupabaseAdmin() as any
   const existingConfig = await getCmsConfig({ includeSecrets: true }).catch(() => null)
+  const existingDept = existingConfig?.departments.find(d => d.id === department.id)
+
+  // ── 1. Create permission ──────────────────────────────────────────
+  if (!existingDept && !isAdmin && !canCreate) {
+    throw new Error("Bạn không có quyền thêm mới ngành hàng.")
+  }
+
+  // ── 2. Update field-level permissions ──────────────────────────────
+  if (existingDept && !isAdmin) {
+    // Check if integration (backend) fields changed
+    const integrationChanged = JSON.stringify(existingDept.integration) !== JSON.stringify(department.integration)
+    
+    // Check if other fields (theme/content) changed
+    const themeDept = { ...department, integration: existingDept.integration }
+    const themeChanged = JSON.stringify(existingDept) !== JSON.stringify(themeDept)
+
+    if (integrationChanged && !canEditBackend) {
+      throw new Error("Bạn không có quyền thay đổi cấu hình Backend.")
+    }
+    if (themeChanged && !canEditTheme) {
+      throw new Error("Bạn không có quyền thay đổi giao diện hoặc nội dung ngành hàng.")
+    }
+  }
+
+  if (!isAdmin && !canEditTheme && !canEditBackend && !canCreate) {
+    throw new Error("Bạn không có quyền chỉnh sửa thông tin ngành hàng.")
+  }
+
   const existingSecrets = new Map(
     existingConfig?.departments.map((d) => [d.id, d.integration.apiKey]) ?? [],
   )
@@ -788,6 +830,16 @@ export async function saveDepartment(department: DepartmentConfig) {
 }
 
 export async function deleteDepartment(id: string) {
+  const session = await getSession()
+  if (!session) throw new Error("Chưa đăng nhập.")
+
+  const isAdmin = session.roles.includes("Admin")
+  const canDelete = session.permissions.includes("department:delete")
+
+  if (!isAdmin && !canDelete) {
+    throw new Error("Bạn không có quyền xóa ngành hàng.")
+  }
+
   const supabase = getSupabaseAdmin() as any
   const { error: deleteError } = await supabase
     .from("departments")

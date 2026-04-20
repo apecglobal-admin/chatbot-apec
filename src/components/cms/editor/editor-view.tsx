@@ -21,12 +21,15 @@ import { Preview } from "./preview"
 import { FieldBlock } from "./field-block"
 import { themeFields } from "../constants"
 import { useCms } from "../layout/cms-provider"
+import { PermissionGuard } from "@/features/auth/components/permission-guard"
+import { usePermissions } from "@/features/auth/hooks/use-permissions"
 
 interface EditorViewProps {
   headerNode?: React.ReactNode
 }
 
 export function EditorView({ headerNode }: EditorViewProps) {
+  const { canEditTheme, canViewBackend, canEditBackend } = usePermissions()
   const {
     activeDepartment: department,
     activeDepartmentIndex: index,
@@ -47,353 +50,367 @@ export function EditorView({ headerNode }: EditorViewProps) {
       <div className="flex flex-col gap-4 min-w-0">
         {headerNode}
         
-        <SectionCard
-          title="Nội dung chính"
-          description="Phần định danh và nội dung hội thoại cốt lõi."
-          icon={Settings2}
-          contentClassName="grid gap-4 md:grid-cols-2"
-        >
-          <FieldBlock label="Tên hiển thị">
-            <Input
-              value={department.name}
-              onChange={(event) => updateDepartment(index, "name", event.target.value)}
-              className={cmsInputClass}
-            />
-          </FieldBlock>
-
-          <FieldBlock label="Kệ / vị trí">
-            <Input
-              value={department.zoneLabel}
-              onChange={(event) => updateDepartment(index, "zoneLabel", event.target.value)}
-              className={cmsInputClass}
-            />
-          </FieldBlock>
-
-          <FieldBlock label="Slug URL">
-            <Input
-              value={department.slug}
-              onChange={(event) => updateDepartment(index, "slug", event.target.value)}
-              className={cmsInputClass}
-            />
-          </FieldBlock>
-
-          <FieldBlock label="Mô tả ngành hàng" className="md:col-span-2">
-            <Textarea
-              value={department.description}
-              onChange={(event) => updateDepartment(index, "description", event.target.value)}
-              className={`${cmsTextareaClass} min-h-[60px]`}
-            />
-          </FieldBlock>
-
-          <FieldBlock label="Lời chào mở đầu" className="md:col-span-2">
-            <Textarea
-              value={department.welcomeMessage}
-              onChange={(event) =>
-                updateDepartment(index, "welcomeMessage", event.target.value)
-              }
-              className={`${cmsTextareaClass} min-h-[60px]`}
-            />
-          </FieldBlock>
-
-          <FieldBlock label="Placeholder ô chat" className="md:col-span-2">
-            <Textarea
-              value={department.placeholder}
-              onChange={(event) => updateDepartment(index, "placeholder", event.target.value)}
-              className={cmsTextareaClass}
-            />
-          </FieldBlock>
-
-          <FieldBlock
-            label="Prompt gợi ý"
-            hint="Mỗi dòng là một câu hỏi mẫu."
-            className="md:col-span-2"
+        <PermissionGuard permission="department:theme">
+          <SectionCard
+            title="Nội dung chính"
+            description="Phần định danh và nội dung hội thoại cốt lõi."
+            icon={Settings2}
+            contentClassName="grid gap-4 md:grid-cols-2"
           >
-            <Textarea
-              value={department.suggestedPrompts.join("\n")}
-              onChange={(event) =>
-                updateDepartment(
-                  index,
-                  "suggestedPrompts",
-                  event.target.value.split("\n")
-                )
-              }
-              className={`${cmsTextareaClass} min-h-[100px]`}
-            />
-          </FieldBlock>
-        </SectionCard>
-
-        <SectionCard
-          title="Hiển thị khi chờ"
-          description="Cấu hình text typewriter hoặc video trong lúc đang chờ AI trả lời."
-          icon={Settings2}
-          contentClassName="grid gap-4 md:grid-cols-2"
-        >
-          <FieldBlock
-            label="Hiển thị khi chờ"
-            hint="Chọn text typewriter hoặc video trong lúc đang chờ AI trả lời."
-          >
-            <Select
-              value={waitingIndicatorMode}
-              onValueChange={(value) => updateWaitingConfig(index, "mode", value as any)}
-            >
-              <SelectTrigger className={`${cmsInputClass} w-full`}>
-                <SelectValue placeholder="Chọn kiểu hiển thị" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="video">Video</SelectItem>
-                <SelectItem value="text">Text typewriter</SelectItem>
-              </SelectContent>
-            </Select>
-          </FieldBlock>
-
-          {waitingIndicatorMode === "text" ? (
-            <>
-              <FieldBlock
-                label="Text chờ phản hồi"
-                hint="Hiệu ứng typewriter khi chờ AI trả lời."
-              >
-                <Input
-                  value={department.waitingConfig.text ?? ""}
-                  onChange={(event) => updateWaitingConfig(index, "text", event.target.value)}
-                  className={cmsInputClass}
-                  placeholder="Đang tìm câu trả lời phù hợp cho bạn"
-                />
-              </FieldBlock>
-              <FieldBlock
-                label="Tốc độ gõ (ms)"
-                hint="Khoảng cách giữa mỗi ký tự (20-200)."
-              >
-                <Input
-                  type="number"
-                  min={20}
-                  max={200}
-                  value={department.waitingConfig.textSpeed ?? 60}
-                  onChange={(event) =>
-                    updateWaitingConfig(index, "textSpeed", Number(event.target.value))
-                  }
-                  className={cmsInputClass}
-                />
-              </FieldBlock>
-              <FieldBlock label="Màu con trỏ gõ">
-                <div className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-2.5">
-                  <input
-                    type="color"
-                    value={
-                      department.waitingConfig.cursorColor || department.theme.accent
-                    }
-                    onChange={(event) =>
-                      updateWaitingConfig(index, "cursorColor", event.target.value)
-                    }
-                    className="h-9 w-10 rounded-lg border-0 bg-transparent"
-                  />
-                  <Input
-                    value={department.waitingConfig.cursorColor ?? ""}
-                    onChange={(event) =>
-                      updateWaitingConfig(index, "cursorColor", event.target.value)
-                    }
-                    className="h-9 rounded-xl border-0 bg-white shadow-none"
-                    placeholder={department.theme.accent}
-                  />
-                </div>
-              </FieldBlock>
-            </>
-          ) : (
-            <FieldBlock
-              label="Video chờ phản hồi"
-              hint="Dán URL hoặc upload video. Nếu để trống sẽ mặc định là /Robot-dao-boi.webm."
-              className="xl:col-span-3"
-            >
-              <MediaInput
-                resourceType="video"
-                accept="video/*"
-                value={department.waitingConfig.videoUrl ?? ""}
-                onChange={(value) => updateWaitingConfig(index, "videoUrl", value)}
-                onUploadComplete={(value) =>
-                  void uploadWaitingMedia(index, "videoUrl", value)
-                }
-                placeholder="https://res.cloudinary.com/.../video/upload/..."
-              />
-            </FieldBlock>
-          )}
-        </SectionCard>
-
-        <SectionCard
-          title="Giao diện & media"
-          description="Màu sắc, hình ảnh và video hiển thị của chatbot."
-          icon={Palette}
-          contentClassName="space-y-4"
-        >
-          <div className="grid gap-4 md:grid-cols-2">
-            {themeFields.map(({ field, label, hint }) => (
-              <FieldBlock key={field} label={label} hint={hint}>
-                <div className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-2.5">
-                  <input
-                    type="color"
-                    value={department.theme[field] || "#000000"}
-                    onChange={(event) => updateTheme(index, field, event.target.value)}
-                    className="h-9 w-10 rounded-lg border-0 bg-transparent"
-                  />
-                  <Input
-                    value={department.theme[field] || ""}
-                    onChange={(event) => updateTheme(index, field, event.target.value)}
-                    className="h-9 rounded-xl border-0 bg-white shadow-none"
-                    placeholder="Mặc định"
-                  />
-                </div>
-              </FieldBlock>
-            ))}
-          </div>
-
-          <div className="grid gap-4">
-            <FieldBlock
-              label="Ảnh nền"
-              hint="Dán URL hoặc upload ảnh"
-            >
-              <MediaInput
-                resourceType="image"
-                accept="image/*"
-                value={department.theme.backgroundImageUrl ?? ""}
-                onChange={(value) => updateTheme(index, "backgroundImageUrl", value)}
-                onUploadComplete={(value) =>
-                  void uploadThemeMedia(index, "backgroundImageUrl", value)
-                }
-                placeholder="https://example.com/background.jpg"
-              />
-            </FieldBlock>
-            <FieldBlock
-              label="Avatar chatbot"
-              hint="Dán URL hoặc upload"
-            >
-              <MediaInput
-                resourceType="image"
-                accept="image/*"
-                value={department.theme.botAvatarUrl ?? ""}
-                onChange={(value) => updateTheme(index, "botAvatarUrl", value)}
-                onUploadComplete={(value) => void uploadThemeMedia(index, "botAvatarUrl", value)}
-                placeholder="https://example.com/avatar.jpg"
-              />
-            </FieldBlock>
-          </div>
-        </SectionCard>
-
-        <SectionCard
-          title="Backend"
-          description="Các tham số kết nối assistant và API riêng."
-          icon={Bot}
-          contentClassName="grid gap-4 md:grid-cols-2"
-        >
-          <FieldBlock
-            label="Assistant slug"
-            hint={
-              !department.integration.assistantSlug
-                ? "Thiếu Assistant slug."
-                : undefined
-            }
-            isError={!department.integration.assistantSlug}
-          >
-            <Input
-              value={department.integration.assistantSlug}
-              onChange={(event) =>
-                updateIntegration(index, "assistantSlug", event.target.value)
-              }
-              placeholder="slug"
-              className={cmsInputClass}
-            />
-          </FieldBlock>
-
-          <FieldBlock
-            label="API key"
-            hint={
-              department.integration.apiKeyConfigured
-                ? "Sửa trực tiếp để đổi key, xóa trắng để gỡ bỏ."
-                : "Chưa có API key."
-            }
-            className="md:col-span-2"
-            isError={!department.integration.apiKeyConfigured}
-          >
-            <div className="relative">
+            <FieldBlock label="Tên hiển thị">
               <Input
-                type="password"
-                value={department.integration.apiKey}
-                onChange={(event) => updateIntegration(index, "apiKey", event.target.value)}
-                className={cn(cmsInputClass, department.integration.apiKey && "pr-10")}
-                placeholder="Nhập API key"
+                value={department.name}
+                onChange={(event) => updateDepartment(index, "name", event.target.value)}
+                className={cmsInputClass}
               />
-              {department.integration.apiKey ? (
-                <button
-                  type="button"
-                  onClick={() => updateIntegration(index, "apiKey", "")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
-                  title="Xóa API key"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              ) : null}
-            </div>
-          </FieldBlock>
+            </FieldBlock>
 
-          <FieldBlock label="Endpoint" className="md:col-span-2">
-            <Input
-              value={department.integration.endpoint}
-              onChange={(event) => updateIntegration(index, "endpoint", event.target.value)}
-              className={cmsInputClass}
-            />
-          </FieldBlock>
+            <FieldBlock label="Kệ / vị trí">
+              <Input
+                value={department.zoneLabel}
+                onChange={(event) => updateDepartment(index, "zoneLabel", event.target.value)}
+                className={cmsInputClass}
+              />
+            </FieldBlock>
 
-          <FieldBlock label="Timeout request (ms)" hint="Thời gian tối đa chờ phản hồi từ AI">
-            <Input
-              type="number"
-              min={3000}
-              max={60000}
-              value={department.integration.requestTimeoutMs}
-              onChange={(event) =>
-                updateIntegration(
-                  index,
-                  "requestTimeoutMs",
-                  Number(event.target.value) || 20000,
-                )
-              }
-              className={cmsInputClass}
-            />
-          </FieldBlock>
+            <FieldBlock label="Slug URL">
+              <Input
+                value={department.slug}
+                onChange={(event) => updateDepartment(index, "slug", event.target.value)}
+                className={cmsInputClass}
+              />
+            </FieldBlock>
 
-          <FieldBlock label="Auto clear chat (phút)" hint="Reset trò chuyện nếu không có tin nhắn mới.">
-            <Input
-              type="number"
-              min={1}
-              max={60}
-              value={department.inactivityTimeoutMinutes ?? 5}
-              onChange={(event) =>
-                updateDepartment(
-                  index,
-                  "inactivityTimeoutMinutes",
-                  Number(event.target.value) || 5,
-                )
-              }
-              className={cmsInputClass}
-            />
-          </FieldBlock>
+            <FieldBlock label="Mô tả ngành hàng" className="md:col-span-2">
+              <Textarea
+                value={department.description}
+                onChange={(event) => updateDepartment(index, "description", event.target.value)}
+                className={`${cmsTextareaClass} min-h-[60px]`}
+              />
+            </FieldBlock>
 
-          <div className="md:col-span-2">
-            <Button
-              variant="default"
-              className="w-full gap-2 rounded-2xl bg-indigo-600 font-semibold text-white shadow-lg shadow-indigo-200 transition-all hover:bg-indigo-700 hover:shadow-indigo-300 active:scale-[0.98]"
-              asChild
+            <FieldBlock label="Lời chào mở đầu" className="md:col-span-2">
+              <Textarea
+                value={department.welcomeMessage}
+                onChange={(event) =>
+                  updateDepartment(index, "welcomeMessage", event.target.value)
+                }
+                className={`${cmsTextareaClass} min-h-[60px]`}
+              />
+            </FieldBlock>
+
+            <FieldBlock label="Placeholder ô chat" className="md:col-span-2">
+              <Textarea
+                value={department.placeholder}
+                onChange={(event) => updateDepartment(index, "placeholder", event.target.value)}
+                className={cmsTextareaClass}
+              />
+            </FieldBlock>
+
+            <FieldBlock
+              label="Prompt gợi ý"
+              hint="Mỗi dòng là một câu hỏi mẫu."
+              className="md:col-span-2"
             >
-              <a
-                href="https://chatbot.apecglobal.net/"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Textarea
+                value={department.suggestedPrompts.join("\n")}
+                onChange={(event) =>
+                  updateDepartment(
+                    index,
+                    "suggestedPrompts",
+                    event.target.value.split("\n")
+                  )
+                }
+                className={`${cmsTextareaClass} min-h-[100px]`}
+              />
+            </FieldBlock>
+          </SectionCard>
+        </PermissionGuard>
+
+        <PermissionGuard permission="department:theme">
+          <SectionCard
+            title="Hiển thị khi chờ"
+            description="Cấu hình text typewriter hoặc video trong lúc đang chờ AI trả lời."
+            icon={Settings2}
+            contentClassName="grid gap-4 md:grid-cols-2"
+          >
+            <FieldBlock
+              label="Hiển thị khi chờ"
+              hint="Chọn text typewriter hoặc video trong lúc đang chờ AI trả lời."
+            >
+              <Select
+                value={waitingIndicatorMode}
+                onValueChange={(value) => updateWaitingConfig(index, "mode", value as any)}
               >
-                <ExternalLink className="h-4 w-4" />
-                Đào tạo chatbot
-              </a>
-            </Button>
-            <p className="mt-2 text-center text-xs text-slate-400 font-medium">
-              Truy cập hệ thống quản trị tri thức để đào tạo thêm dữ liệu cho chatbot.
-            </p>
-          </div>
-        </SectionCard>
+                <SelectTrigger className={`${cmsInputClass} w-full`}>
+                  <SelectValue placeholder="Chọn kiểu hiển thị" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="video">Video</SelectItem>
+                  <SelectItem value="text">Text typewriter</SelectItem>
+                </SelectContent>
+              </Select>
+            </FieldBlock>
+
+            {waitingIndicatorMode === "text" ? (
+              <>
+                <FieldBlock
+                  label="Text chờ phản hồi"
+                  hint="Hiệu ứng typewriter khi chờ AI trả lời."
+                >
+                  <Input
+                    value={department.waitingConfig.text ?? ""}
+                    onChange={(event) => updateWaitingConfig(index, "text", event.target.value)}
+                    className={cmsInputClass}
+                    placeholder="Đang tìm câu trả lời phù hợp cho bạn"
+                  />
+                </FieldBlock>
+                <FieldBlock
+                  label="Tốc độ gõ (ms)"
+                  hint="Khoảng cách giữa mỗi ký tự (20-200)."
+                >
+                  <Input
+                    type="number"
+                    min={20}
+                    max={200}
+                    value={department.waitingConfig.textSpeed ?? 60}
+                    onChange={(event) =>
+                      updateWaitingConfig(index, "textSpeed", Number(event.target.value))
+                    }
+                    className={cmsInputClass}
+                  />
+                </FieldBlock>
+                <FieldBlock label="Màu con trỏ gõ">
+                  <div className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-2.5">
+                    <input
+                      type="color"
+                      value={
+                        department.waitingConfig.cursorColor || department.theme.accent
+                      }
+                      onChange={(event) =>
+                        updateWaitingConfig(index, "cursorColor", event.target.value)
+                      }
+                      className="h-9 w-10 rounded-lg border-0 bg-transparent"
+                    />
+                    <Input
+                      value={department.waitingConfig.cursorColor ?? ""}
+                      onChange={(event) =>
+                        updateWaitingConfig(index, "cursorColor", event.target.value)
+                      }
+                      className="h-9 rounded-xl border-0 bg-white shadow-none"
+                      placeholder={department.theme.accent}
+                    />
+                  </div>
+                </FieldBlock>
+              </>
+            ) : (
+              <FieldBlock
+                label="Video chờ phản hồi"
+                hint="Dán URL hoặc upload video. Nếu để trống sẽ mặc định là /Robot-dao-boi.webm."
+                className="xl:col-span-3"
+              >
+                <MediaInput
+                  resourceType="video"
+                  accept="video/*"
+                  value={department.waitingConfig.videoUrl ?? ""}
+                  onChange={(value) => updateWaitingConfig(index, "videoUrl", value)}
+                  onUploadComplete={(value) =>
+                    void uploadWaitingMedia(index, "videoUrl", value)
+                  }
+                  placeholder="https://res.cloudinary.com/.../video/upload/..."
+                />
+              </FieldBlock>
+            )}
+          </SectionCard>
+        </PermissionGuard>
+
+        <PermissionGuard permission="department:theme">
+          <SectionCard
+            title="Giao diện & media"
+            description="Màu sắc, hình ảnh và video hiển thị của chatbot."
+            icon={Palette}
+            contentClassName="space-y-4"
+          >
+            <div className="grid gap-4 md:grid-cols-2">
+              {themeFields.map(({ field, label, hint }) => (
+                <FieldBlock key={field} label={label} hint={hint}>
+                  <div className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-2.5">
+                    <input
+                      type="color"
+                      value={department.theme[field] || "#000000"}
+                      onChange={(event) => updateTheme(index, field, event.target.value)}
+                      className="h-9 w-10 rounded-lg border-0 bg-transparent"
+                    />
+                    <Input
+                      value={department.theme[field] || ""}
+                      onChange={(event) => updateTheme(index, field, event.target.value)}
+                      className="h-9 rounded-xl border-0 bg-white shadow-none"
+                      placeholder="Mặc định"
+                    />
+                  </div>
+                </FieldBlock>
+              ))}
+            </div>
+
+            <div className="grid gap-4">
+              <FieldBlock
+                label="Ảnh nền"
+                hint="Dán URL hoặc upload ảnh"
+              >
+                <MediaInput
+                  resourceType="image"
+                  accept="image/*"
+                  value={department.theme.backgroundImageUrl ?? ""}
+                  onChange={(value) => updateTheme(index, "backgroundImageUrl", value)}
+                  onUploadComplete={(value) =>
+                    void uploadThemeMedia(index, "backgroundImageUrl", value)
+                  }
+                  placeholder="https://example.com/background.jpg"
+                />
+              </FieldBlock>
+              <FieldBlock
+                label="Avatar chatbot"
+                hint="Dán URL hoặc upload"
+              >
+                <MediaInput
+                  resourceType="image"
+                  accept="image/*"
+                  value={department.theme.botAvatarUrl ?? ""}
+                  onChange={(value) => updateTheme(index, "botAvatarUrl", value)}
+                  onUploadComplete={(value) => void uploadThemeMedia(index, "botAvatarUrl", value)}
+                  placeholder="https://example.com/avatar.jpg"
+                />
+              </FieldBlock>
+            </div>
+          </SectionCard>
+        </PermissionGuard>
+
+        {/* Backend Section: Visible if can view or edit */}
+        { (canViewBackend || canEditBackend) && (
+          <SectionCard
+            title="Backend"
+            description="Các tham số kết nối assistant và API riêng."
+            icon={Bot}
+            contentClassName="grid gap-4 md:grid-cols-2"
+          >
+            <FieldBlock
+              label="Assistant slug"
+              hint={
+                !department.integration.assistantSlug
+                  ? "Thiếu Assistant slug."
+                  : undefined
+              }
+              isError={!department.integration.assistantSlug}
+            >
+              <Input
+                value={department.integration.assistantSlug}
+                onChange={(event) =>
+                  updateIntegration(index, "assistantSlug", event.target.value)
+                }
+                placeholder="slug"
+                className={cmsInputClass}
+                disabled={!canEditBackend}
+              />
+            </FieldBlock>
+
+            <FieldBlock
+              label="API key"
+              hint={
+                department.integration.apiKeyConfigured
+                  ? "Sửa trực tiếp để đổi key, xóa trắng để gỡ bỏ."
+                  : "Chưa có API key."
+              }
+              className="md:col-span-2"
+              isError={!department.integration.apiKeyConfigured}
+            >
+              <div className="relative">
+                <Input
+                  type="password"
+                  value={department.integration.apiKey}
+                  onChange={(event) => updateIntegration(index, "apiKey", event.target.value)}
+                  className={cn(cmsInputClass, department.integration.apiKey && "pr-10")}
+                  placeholder="Nhập API key"
+                  disabled={!canEditBackend}
+                />
+                {department.integration.apiKey && canEditBackend ? (
+                  <button
+                    type="button"
+                    onClick={() => updateIntegration(index, "apiKey", "")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                    title="Xóa API key"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                ) : null}
+              </div>
+            </FieldBlock>
+
+            <FieldBlock label="Endpoint" className="md:col-span-2">
+              <Input
+                value={department.integration.endpoint}
+                onChange={(event) => updateIntegration(index, "endpoint", event.target.value)}
+                className={cmsInputClass}
+                disabled={!canEditBackend}
+              />
+            </FieldBlock>
+
+            <FieldBlock label="Timeout request (ms)" hint="Thời gian tối đa chờ phản hồi từ AI">
+              <Input
+                type="number"
+                min={3000}
+                max={60000}
+                value={department.integration.requestTimeoutMs}
+                onChange={(event) =>
+                  updateIntegration(
+                    index,
+                    "requestTimeoutMs",
+                    Number(event.target.value) || 20000,
+                  )
+                }
+                className={cmsInputClass}
+                disabled={!canEditBackend}
+              />
+            </FieldBlock>
+
+            <FieldBlock label="Auto clear chat (phút)" hint="Reset trò chuyện nếu không có tin nhắn mới.">
+              <Input
+                type="number"
+                min={1}
+                max={60}
+                value={department.inactivityTimeoutMinutes ?? 5}
+                onChange={(event) =>
+                  updateDepartment(
+                    index,
+                    "inactivityTimeoutMinutes",
+                    Number(event.target.value) || 5,
+                  )
+                }
+                className={cmsInputClass}
+                disabled={!canEditBackend}
+              />
+            </FieldBlock>
+
+            <div className="md:col-span-2">
+              <Button
+                variant="default"
+                className="w-full gap-2 rounded-2xl bg-indigo-600 font-semibold text-white shadow-lg shadow-indigo-200 transition-all hover:bg-indigo-700 hover:shadow-indigo-300 active:scale-[0.98]"
+                asChild
+              >
+                <a
+                  href="https://chatbot.apecglobal.net/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Đào tạo chatbot
+                </a>
+              </Button>
+              <p className="mt-2 text-center text-xs text-slate-400 font-medium">
+                Truy cập hệ thống quản trị tri thức để đào tạo thêm dữ liệu cho chatbot.
+              </p>
+            </div>
+          </SectionCard>
+        )}
       </div>
 
       <Preview key={department.id} department={department} />

@@ -16,6 +16,7 @@ interface MediaInputProps {
   value: string;
   onChange: (value: string) => void;
   onUploadComplete?: (value: string) => Promise<void> | void;
+  disabled?: boolean;
 }
 
 export function MediaInput({
@@ -25,6 +26,7 @@ export function MediaInput({
   value,
   onChange,
   onUploadComplete,
+  disabled = false,
 }: MediaInputProps) {
   const inputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -104,6 +106,7 @@ export function MediaInput({
           onChange={(event) => onChange(event.target.value)}
           className={cn(cmsInputClass, "pr-[7.5rem]")}
           placeholder={placeholder}
+          disabled={disabled}
         />
         <div className="absolute inset-y-0 right-2 flex items-center gap-1">
           {value ? (
@@ -112,6 +115,7 @@ export function MediaInput({
               size="icon"
               variant="ghost"
               onClick={() => onChange("")}
+              disabled={disabled}
               className="h-8 w-8 rounded-full text-rose-400 hover:bg-rose-50 hover:text-rose-600"
               title="Xóa giá trị"
               aria-label="Xóa giá trị"
@@ -125,6 +129,7 @@ export function MediaInput({
             size="icon"
             variant="ghost"
             onClick={() => fileInputRef.current?.click()}
+            disabled={disabled}
             className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
             title="Tải lên"
             aria-label="Tải lên"

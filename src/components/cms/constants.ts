@@ -1,6 +1,6 @@
 import type { DepartmentConfig } from "@/types/cms";
 
-export type CmsView = "dashboard" | "department";
+export type CmsView = "dashboard" | "department" | "roles" | "users";
 
 export const themeFields: Array<{
   field: keyof DepartmentConfig["theme"];

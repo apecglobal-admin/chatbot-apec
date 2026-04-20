@@ -212,7 +212,7 @@ export function ChatConversation({
         >
           <div
             ref={scrollRef}
-            className="relative z-10 flex-1 space-y-6 overflow-y-auto px-6 py-6 md:px-8"
+            className="relative z-10 flex-1 space-y-6 overflow-y-auto custom-scrollbar px-6 py-6 md:px-8"
           >
             {messages.map((message: ChatThreadMessage) => (
               <ChatMessage
