@@ -71,7 +71,7 @@ const bootstrapMigrations = [
       insert into public.store_settings (id, name, subtitle, support_phone)
       values (
         'default',
-        'Apec Shelf AI',
+        'Chatbot Ecoop Mart',
         'Mỗi màn hình tại kệ là một trợ lý sản phẩm chuyên biệt.',
         '1900 6868'
       )

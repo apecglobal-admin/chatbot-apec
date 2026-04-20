@@ -1,10 +1,11 @@
 import type { Metadata } from "next"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
-import { Toaster } from "@/components/ui/sonner"
+import { Toaster } from "@/shared/components/ui/sonner"
+import { Providers } from "@/shared/components/providers/providers"
 
 export const metadata: Metadata = {
-  title: "Apec Shelf AI",
+  title: "Chatbot Ecoop Mart",
   description: "Hệ thống chatbot chuyên biệt theo từng kệ hàng trong siêu thị.",
 }
 
@@ -16,7 +17,9 @@ export default function RootLayout({
   return (
     <html lang="vi" suppressHydrationWarning>
       <body className="font-sans antialiased">
-        {children}
+        <Providers>
+          {children}
+        </Providers>
         <Toaster />
         <Analytics />
       </body>
