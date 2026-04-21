@@ -8,6 +8,38 @@ import type { ChatThreadMessage } from "@/features/chat/types/chat"
 import { createWelcomeMessage } from "@/features/chat/utils/chat"
 import { formatChatTimestamp, generateTimestampId } from "@/shared/utils/date"
 
+type ChatSsePayload = {
+  chunk?: string
+  done?: boolean
+  response?: string
+  conversation_id?: string
+  suggestions?: string[]
+}
+
+const SSE_EVENT_BOUNDARY = /\r?\n\r?\n/
+
+function parseSseEvent(rawEvent: string) {
+  const lines = rawEvent.split(/\r?\n/)
+  let eventType = ""
+  const dataLines: string[] = []
+
+  for (const line of lines) {
+    if (line.startsWith("event:")) {
+      eventType = line.slice(6).trim()
+      continue
+    }
+
+    if (line.startsWith("data:")) {
+      dataLines.push(line.slice(5).trimStart())
+    }
+  }
+
+  return {
+    eventType,
+    eventData: dataLines.join("\n"),
+  }
+}
+
 interface UseChatConversationOptions {
   department: DepartmentConfig
   apiConfigured: boolean
@@ -77,7 +109,9 @@ export function useChatConversation({
     clearConversation()
   }, [department.slug, clearConversation])
 
-  // Auto-close conversation when user closes the tab / browser
+  // Auto-close conversation when the page is actually being unloaded.
+  // `visibilitychange` also fires when switching tabs/windows, which should not
+  // end the current chat session.
   useEffect(() => {
     const handleUnload = () => {
       if (conversationIdRef.current) {
@@ -85,16 +119,18 @@ export function useChatConversation({
       }
     }
 
-    window.addEventListener("beforeunload", handleUnload)
-    // visibilitychange catches mobile cases where beforeunload may not fire
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") {
+    const handlePageHide = (event: PageTransitionEvent) => {
+      if (!event.persisted) {
         handleUnload()
       }
-    })
+    }
+
+    window.addEventListener("beforeunload", handleUnload)
+    window.addEventListener("pagehide", handlePageHide)
 
     return () => {
       window.removeEventListener("beforeunload", handleUnload)
+      window.removeEventListener("pagehide", handlePageHide)
     }
   }, [sendCloseBeacon])
 
@@ -175,6 +211,77 @@ export function useChatConversation({
         let buffer = "" // Buffer for incomplete lines across chunk boundaries
         let assistantMessageAdded = false // Only add message bubble on first chunk
 
+        const ensureAssistantMessage = (content: string) => {
+          if (assistantMessageAdded) {
+            return
+          }
+
+          assistantMessageAdded = true
+          setMessages((current) => [
+            ...current,
+            {
+              id: assistantMessageId,
+              role: "assistant",
+              content,
+              timestamp: formatChatTimestamp(),
+            },
+          ])
+        }
+
+        const updateAssistantMessage = (content: string) => {
+          ensureAssistantMessage(content)
+          setMessages((current) =>
+            current.map((msg) =>
+              msg.id === assistantMessageId
+                ? { ...msg, content }
+                : msg,
+            ),
+          )
+        }
+
+        const handleSseEvent = (eventStr: string) => {
+          const { eventType, eventData } = parseSseEvent(eventStr)
+
+          if (!eventData) {
+            return
+          }
+
+          try {
+            const data = JSON.parse(eventData) as ChatSsePayload
+
+            if (eventType === "chunk" && data.chunk) {
+              fullContent += data.chunk
+
+              // Stream audio chunk piece immediately
+              onAssistantChunk?.(data.chunk)
+              updateAssistantMessage(fullContent)
+            }
+
+            // When done, finalize conversation metadata
+            if (eventType === "done") {
+              if (data.conversation_id) {
+                setConversationId(data.conversation_id)
+                conversationIdRef.current = data.conversation_id
+              }
+              if (data.suggestions) {
+                setSuggestedPrompts(data.suggestions)
+              }
+              if (data.response) {
+                fullContent = data.response
+                updateAssistantMessage(fullContent)
+              }
+            }
+
+            // Suggestions arrive as a separate event after done
+            if (eventType === "suggestions" && data.suggestions) {
+              setSuggestedPrompts(data.suggestions)
+            }
+          } catch {
+            // Skip malformed JSON data
+            console.warn("[chat] skipping malformed SSE data:", eventData.slice(0, 100))
+          }
+        }
+
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
@@ -182,163 +289,18 @@ export function useChatConversation({
           // Append decoded text to buffer so partial lines are preserved
           buffer += decoder.decode(value, { stream: true })
 
-          // Split by double newline to get SSE events
-          const events = buffer.split("\n\n")
-          // Keep the last (potentially incomplete) event in the buffer
-          buffer = events.pop() ?? ""
-
-          for (const eventStr of events) {
-            const lines = eventStr.split("\n")
-            let eventType = ""
-            let eventData = ""
-
-            // Parse SSE format: "event: name" and "data: content"
-            for (const line of lines) {
-              if (line.startsWith("event:")) {
-                eventType = line.slice(6).trim()
-              } else if (line.startsWith("data:")) {
-                eventData = line.slice(5).trim()
-              }
-            }
-
-            if (!eventData) continue
-
-            try {
-              const data = JSON.parse(eventData) as {
-                chunk?: string
-                done?: boolean
-                response?: string
-                conversation_id?: string
-                suggestions?: string[]
-              }
-
-              if (eventType === "chunk" && data.chunk) {
-                fullContent += data.chunk
-
-                // Stream audio chunk piece immediately
-                onAssistantChunk?.(data.chunk)
-
-                if (!assistantMessageAdded) {
-                  // Add the assistant bubble on the first chunk
-                  assistantMessageAdded = true
-                  setMessages((current) => [
-                    ...current,
-                    {
-                      id: assistantMessageId,
-                      role: "assistant",
-                      content: fullContent,
-                      timestamp: formatChatTimestamp(),
-                    },
-                  ])
-                } else {
-                  // Update the assistant message in-place
-                  setMessages((current) =>
-                    current.map((msg) =>
-                      msg.id === assistantMessageId
-                        ? { ...msg, content: fullContent }
-                        : msg,
-                    ),
-                  )
-                }
-              }
-
-              // When done, finalize conversation metadata
-              if (eventType === "done") {
-                if (data.conversation_id) {
-                  setConversationId(data.conversation_id)
-                  conversationIdRef.current = data.conversation_id
-                }
-                if (data.suggestions) {
-                  setSuggestedPrompts(data.suggestions)
-                }
-                if (data.response) {
-                  fullContent = data.response
-                  setMessages((current) =>
-                    current.map((msg) =>
-                      msg.id === assistantMessageId
-                        ? { ...msg, content: fullContent }
-                        : msg,
-                    ),
-                  )
-                }
-              }
-
-              // Suggestions arrive as a separate event after done
-              if (eventType === "suggestions" && data.suggestions) {
-                setSuggestedPrompts(data.suggestions)
-              }
-            } catch (e) {
-              // Skip malformed JSON data
-              console.warn("[chat] skipping malformed SSE data:", eventData.slice(0, 100))
-            }
+          let match = buffer.match(SSE_EVENT_BOUNDARY)
+          while (match && match.index !== undefined) {
+            const eventStr = buffer.slice(0, match.index)
+            buffer = buffer.slice(match.index + match[0].length)
+            handleSseEvent(eventStr)
+            match = buffer.match(SSE_EVENT_BOUNDARY)
           }
         }
 
         // Process any remaining data in the buffer after stream ends
         if (buffer.trim()) {
-          const lines = buffer.trim().split("\n")
-          let eventType = ""
-          let eventData = ""
-
-          for (const line of lines) {
-            if (line.startsWith("event:")) {
-              eventType = line.slice(6).trim()
-            } else if (line.startsWith("data:")) {
-              eventData = line.slice(5).trim()
-            }
-          }
-
-          if (eventData) {
-            try {
-              const data = JSON.parse(eventData) as {
-                chunk?: string
-                done?: boolean
-                response?: string
-                conversation_id?: string
-                suggestions?: string[]
-              }
-
-              if (eventType === "chunk" && data.chunk) {
-                fullContent += data.chunk
-                onAssistantChunk?.(data.chunk)
-                
-                setMessages((current) =>
-                  current.map((msg) =>
-                    msg.id === assistantMessageId
-                      ? { ...msg, content: fullContent }
-                      : msg,
-                  ),
-                )
-              }
-
-              if (eventType === "done") {
-                if (data.conversation_id) {
-                  setConversationId(data.conversation_id)
-                  conversationIdRef.current = data.conversation_id
-                }
-                if (data.suggestions) {
-                  setSuggestedPrompts(data.suggestions)
-                }
-                if (data.response) {
-                  fullContent = data.response
-                  setMessages((current) =>
-                    current.map((msg) =>
-                      msg.id === assistantMessageId
-                        ? { ...msg, content: fullContent }
-                        : msg,
-                    ),
-                  )
-                }
-              }
-
-              // Suggestions arrive as a separate event after done
-              if (eventType === "suggestions" && data.suggestions) {
-                setSuggestedPrompts(data.suggestions)
-              }
-            } catch (e) {
-              console.warn("[chat] skipping malformed trailing SSE data:", eventData.slice(0, 100))
-            }
-          }
+          handleSseEvent(buffer.trim())
         }
 
         onAssistantMessage?.(fullContent)
@@ -379,7 +341,7 @@ export function useChatConversation({
         abortRef.current = null
       }
     },
-    [apiConfigured, conversationId, department.slug, isSubmitting, onAssistantMessage, userId],
+    [apiConfigured, conversationId, department.slug, isSubmitting, onAssistantChunk, onAssistantMessage, userId],
   )
 
   return {
