@@ -7,6 +7,11 @@ import { Providers } from "@/shared/components/providers/providers"
 export const metadata: Metadata = {
   title: "Chatbot Ecoop Mart",
   description: "Hệ thống chatbot chuyên biệt theo từng kệ hàng trong siêu thị.",
+  icons: {
+    icon: "/images/LOGO-APECTECH-bg.jpeg",
+    shortcut: "/images/LOGO-APECTECH-bg.jpeg",
+    apple: "/images/LOGO-APECTECH-bg.jpeg",
+  },
 }
 
 export default function RootLayout({
