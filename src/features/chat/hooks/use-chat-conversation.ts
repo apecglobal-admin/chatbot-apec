@@ -318,7 +318,7 @@ export function useChatConversation({
         console.error("Failed to send chat message.", message)
 
         const fallbackResponse =
-          "Xin lỗi, hiện tại đang có lỗi kỹ thuật. Xin thử lại sau."
+          "Rất tiếc, hệ thống đang gặp gián đoạn. Bạn vui lòng thử lại sau nhé!"
 
         setErrorMessage("Hệ thống đang bận. Vui lòng thử lại sau.")
         setMessages((current) => {
