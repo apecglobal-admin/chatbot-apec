@@ -36,10 +36,13 @@ function useTypewriter(content: string, enabled: boolean) {
 
 // Regex to match URLs that point to images (by extension or known image hosts)
 const IMAGE_URL_REGEX =
-  /https?:\/\/[^\s"'<>]+\.(?:png|jpe?g|gif|webp|svg|bmp|ico|avif)(?:\?[^\s"'<>]*)?/gi;
+  /https?:\/\/[^\s"<>]+\.(?:png|jpe?g|gif|webp|svg|bmp|ico|avif)(?:\?[^\s"<>]*)?/gi;
 
-// Regex to match markdown links: [text](url)
-const MARKDOWN_LINK_REGEX = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gi;
+// Regex to match markdown links: [text](url) — supports any scheme
+const MARKDOWN_LINK_REGEX = /\[([^\]]+)\]\(([a-z][a-z0-9+.-]*:\/\/[^\s)]+)\)/gi;
+
+// Regex to match bare URLs with any scheme (catches custom schemes like apec-space://)
+const BARE_URL_REGEX = /[a-z][a-z0-9+.-]*:\/\/[^\s"<>]+/gi;
 
 type Token =
   | { type: "text"; value: string }
@@ -76,6 +79,17 @@ function MessageContent({
       index: linkMatch.index,
       length: linkMatch[0].length,
       token: { type: "link", text: linkMatch[1], url: linkMatch[2] },
+    });
+  }
+
+  // Find bare URLs (any scheme, including custom like apec-space://)
+  BARE_URL_REGEX.lastIndex = 0;
+  let bareMatch;
+  while ((bareMatch = BARE_URL_REGEX.exec(content)) !== null) {
+    matches.push({
+      index: bareMatch.index,
+      length: bareMatch[0].length,
+      token: { type: "link", text: bareMatch[0], url: bareMatch[0] },
     });
   }
 
