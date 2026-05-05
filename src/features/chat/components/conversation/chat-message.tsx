@@ -4,6 +4,7 @@ import type { DepartmentTheme } from "@/features/cms/types/cms";
 import { hexToRgba } from "@/shared/utils/color";
 import { cn } from "@/shared/utils/ui";
 import { useEffect, useRef, useState } from "react";
+import { Link2 } from "lucide-react";
 import type { ChatRole } from "@/features/chat/types/chat";
 
 import { BotAvatar } from "@/features/chat/components/shared/bot-avatar";
@@ -43,6 +44,42 @@ const MARKDOWN_LINK_REGEX = /\[([^\]]+)\]\(([a-z][a-z0-9+.-]*:\/\/[^\s)]+)\)/gi;
 
 // Regex to match bare URLs with any scheme (catches custom schemes like apec-space://)
 const BARE_URL_REGEX = /[a-z][a-z0-9+.-]*:\/\/[^\s"<>]+/gi;
+
+const COMMON_HOST_PREFIXES = new Set(["www", "m", "app", "open", "gateway"]);
+
+function getLinkLabel(url: string, label?: string) {
+  const trimmed = label?.trim();
+  if (trimmed && !/^https?:\/\//i.test(trimmed)) return trimmed;
+
+  try {
+    const parsed = new URL(url);
+    const scheme = parsed.protocol.replace(/:$/, "");
+
+    // Custom scheme (non-http) → use scheme name as label
+    if (!/^https?$/i.test(scheme)) {
+      const base = scheme.replace(/[-_]+/g, " ").trim();
+      return base ? `Mở ${base.charAt(0).toUpperCase() + base.slice(1)}` : "Mở liên kết";
+    }
+
+    const parts = parsed.hostname
+      .replace(/^www\./i, "")
+      .split(".")
+      .filter(Boolean);
+    const filtered = parts.filter((p) => !COMMON_HOST_PREFIXES.has(p.toLowerCase()));
+    const normalized = filtered.length ? filtered : parts;
+    if (!normalized.length) return "Mở liên kết";
+
+    const lastIdx = normalized.length - 1;
+    const baseIdx =
+      lastIdx >= 2 && normalized[lastIdx - 1].length <= 3
+        ? lastIdx - 2
+        : Math.max(0, lastIdx - 1);
+    const base = (normalized[baseIdx] ?? normalized[0]).replace(/[-_]+/g, " ").trim();
+    return base ? `Mở ${base.charAt(0).toUpperCase() + base.slice(1)}` : "Mở liên kết";
+  } catch {
+    return "Mở liên kết";
+  }
+}
 
 type Token =
   | { type: "text"; value: string }
@@ -149,23 +186,28 @@ function MessageContent({
         }
 
         if (token.type === "link") {
+          const linkLabel = getLinkLabel(token.url, token.text !== token.url ? token.text : undefined);
           return (
             <a
               key={index}
               href={token.url}
               target="_blank"
               rel="noopener noreferrer"
+              title={token.url}
               className={cn(
-                "inline-flex font-medium transition-all hover:underline",
+                "my-0.5 inline-flex max-w-full items-start gap-1.5 align-middle font-medium underline underline-offset-2 transition-all hover:opacity-80",
                 isUser
-                  ? "text-white underline decoration-white/40 underline-offset-4 hover:decoration-white"
-                  : "underline decoration-slate-300 underline-offset-4 hover:decoration-current",
+                  ? "text-white decoration-white/40 hover:decoration-white"
+                  : "decoration-current/40 hover:decoration-current",
               )}
               style={{
                 color: !isUser ? theme.accent : undefined,
               }}
             >
-              {token.text}
+              <Link2 className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-80" />
+              <span className="text-sm leading-tight break-all">
+                {linkLabel}
+              </span>
             </a>
           );
         }
