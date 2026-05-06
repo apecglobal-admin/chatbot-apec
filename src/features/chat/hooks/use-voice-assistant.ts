@@ -105,7 +105,16 @@ export function useVoiceAssistant({
         }
 
         const data = (await response.json()) as { text?: string }
-        const transcribedText = data.text?.trim() || ""
+        let transcribedText = data.text?.trim() || ""
+
+        // Filter hallucinated silence translation common with Whisper
+        const lowerText = transcribedText.toLowerCase()
+        if (
+          lowerText.includes("la la school") ||
+          lowerText.includes("cảm ơn các bạn đã theo dõi và hẹn gặp lại")
+        ) {
+          transcribedText = ""
+        }
 
         console.log("[Voice Assistant] Transcription response", {
           text: transcribedText,
