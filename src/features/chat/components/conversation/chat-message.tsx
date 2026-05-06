@@ -8,6 +8,7 @@ import { Link2 } from "lucide-react";
 import type { ChatRole } from "@/features/chat/types/chat";
 
 import { BotAvatar } from "@/features/chat/components/shared/bot-avatar";
+import { ChatDeeplinkQr } from "./chat-deeplink-qr";
 
 function useTypewriter(content: string, enabled: boolean) {
   const [displayed, setDisplayed] = useState(() => content);
@@ -187,6 +188,20 @@ function MessageContent({
 
         if (token.type === "link") {
           const linkLabel = getLinkLabel(token.url, token.text !== token.url ? token.text : undefined);
+          const isDeeplink = !/^https?:\/\//i.test(token.url);
+
+          if (isDeeplink) {
+            return (
+              <ChatDeeplinkQr
+                key={index}
+                url={token.url}
+                label={linkLabel}
+                theme={theme}
+                isUser={isUser}
+              />
+            );
+          }
+
           return (
             <a
               key={index}
